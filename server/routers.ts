@@ -351,6 +351,11 @@ export const appRouter = router({
         const allRates = await db.getAllRates();
         const allMultipliers = await db.getAllMultipliers();
         
+        // Get multipliers by payer type
+        const medicareMultiplier = allMultipliers.find(m => m.payerType === 'Medicare');
+        const commercialMultiplier = allMultipliers.find(m => m.payerType === 'Commercial');
+        const medicaidMultiplier = allMultipliers.find(m => m.payerType === 'Medicaid');
+        
         let fpaTotal = 0;
         let article28Total = 0;
         
@@ -358,7 +363,7 @@ export const appRouter = router({
         for (const detail of scenario.details) {
           if (!detail.cptCodeId) continue;
           
-          // Find applicable rates
+          // Find applicable rates (these are Medicare base rates)
           const fpaRates = allRates.filter(r => 
             r.cptCodeId === detail.cptCodeId && r.siteType === 'FPA'
           );
@@ -366,19 +371,42 @@ export const appRouter = router({
             r.cptCodeId === detail.cptCodeId && r.siteType === 'Article28'
           );
           
-          // Calculate FPA total (uses Global rate)
+          // Get base rates
           const fpaGlobalRate = fpaRates.find(r => r.component === 'Global');
-          if (fpaGlobalRate) {
-            fpaTotal += fpaGlobalRate.rate * detail.quantity;
-          }
-          
-          // Calculate Article 28 total (uses Professional + Technical)
           const article28ProfRate = article28Rates.find(r => r.component === 'Professional');
           const article28TechRate = article28Rates.find(r => r.component === 'Technical');
           
-          if (article28ProfRate && article28TechRate) {
-            article28Total += (article28ProfRate.rate + article28TechRate.rate) * detail.quantity;
-          }
+          if (!fpaGlobalRate || !article28ProfRate || !article28TechRate) continue;
+          
+          // Calculate weighted average based on payer mix
+          const medicarePercent = scenario.medicarePercent / 100;
+          const commercialPercent = scenario.commercialPercent / 100;
+          const medicaidPercent = scenario.medicaidPercent / 100;
+          
+          // FPA calculation (uses Global rate with multipliers)
+          const fpaGlobalBase = fpaGlobalRate.rate;
+          const fpaMedicare = fpaGlobalBase * medicarePercent * (medicareMultiplier?.globalMultiplier || 100) / 100;
+          const fpaCommercial = fpaGlobalBase * commercialPercent * (commercialMultiplier?.globalMultiplier || 165) / 100;
+          const fpaMedicaid = fpaGlobalBase * medicaidPercent * (medicaidMultiplier?.globalMultiplier || 80) / 100;
+          const fpaWeightedRate = fpaMedicare + fpaCommercial + fpaMedicaid;
+          fpaTotal += fpaWeightedRate * detail.quantity;
+          
+          // Article 28 calculation (uses Professional + Technical with separate multipliers)
+          const article28ProfBase = article28ProfRate.rate;
+          const article28TechBase = article28TechRate.rate;
+          
+          // Professional component
+          const profMedicare = article28ProfBase * medicarePercent * (medicareMultiplier?.professionalMultiplier || 100) / 100;
+          const profCommercial = article28ProfBase * commercialPercent * (commercialMultiplier?.professionalMultiplier || 140) / 100;
+          const profMedicaid = article28ProfBase * medicaidPercent * (medicaidMultiplier?.professionalMultiplier || 80) / 100;
+          
+          // Technical component
+          const techMedicare = article28TechBase * medicarePercent * (medicareMultiplier?.technicalMultiplier || 100) / 100;
+          const techCommercial = article28TechBase * commercialPercent * (commercialMultiplier?.technicalMultiplier || 220) / 100;
+          const techMedicaid = article28TechBase * medicaidPercent * (medicaidMultiplier?.technicalMultiplier || 80) / 100;
+          
+          const article28WeightedRate = profMedicare + profCommercial + profMedicaid + techMedicare + techCommercial + techMedicaid;
+          article28Total += article28WeightedRate * detail.quantity;
         }
         
         // Update scenario with calculated totals

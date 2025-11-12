@@ -50,3 +50,4 @@
 ## Bug Fixes
 - [x] Fix React setState error in Home page navigation
 - [x] Fix scenario creation insertId error (NaN in scenario_details)
+- [x] Fix calculation logic to use global rates for FPA and technical+professional for Article 28
