@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, AlertCircle, Plus, Pencil, Check, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Plus, Pencil, Check, X, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -15,6 +15,7 @@ export default function RatesManagement() {
   
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [showImportDialog, setShowImportDialog] = useState(false);
   
   const isAdmin = user?.role === "admin";
 
@@ -26,6 +27,24 @@ export default function RatesManagement() {
     },
     onError: (error) => {
       toast.error(`Failed to update rate: ${error.message}`);
+    },
+  });
+
+  const bulkImportMutation = trpc.rates.bulkImport.useMutation({
+    onSuccess: (data) => {
+      utils.rates.listWithDetails.invalidate();
+      if (data.success) {
+        toast.success(`Successfully imported ${data.successCount} rates`);
+      } else {
+        toast.warning(`Imported ${data.successCount} rates with ${data.errorCount} errors`);
+        if (data.errors.length > 0) {
+          console.error("Import errors:", data.errors);
+        }
+      }
+      setShowImportDialog(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to import rates: ${error.message}`);
     },
   });
 
@@ -53,6 +72,65 @@ export default function RatesManagement() {
     setEditValue("");
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error("CSV file must have a header row and at least one data row");
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rates = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const rate: any = {};
+
+        headers.forEach((header, index) => {
+          const value = values[index];
+          if (header === 'cptCode') rate.cptCode = value;
+          else if (header === 'siteType') rate.siteType = value;
+          else if (header === 'component') rate.component = value;
+          else if (header === 'rate') rate.rate = Math.round(parseFloat(value) * 100);
+          else if (header === 'verified') rate.verified = value.toLowerCase() === 'true';
+          else if (header === 'notes') rate.notes = value;
+        });
+
+        if (rate.cptCode && rate.siteType && rate.component && !isNaN(rate.rate)) {
+          rates.push(rate);
+        }
+      }
+
+      if (rates.length === 0) {
+        toast.error("No valid rates found in CSV");
+        return;
+      }
+
+      bulkImportMutation.mutate({ rates });
+    };
+
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const downloadTemplate = () => {
+    const template = `cptCode,siteType,component,rate,verified,notes\n99213,FPA,Global,93.00,true,Medicare 2025 rate\n99213,Article28,Professional,54.00,true,Medicare 2025 rate\n99213,Article28,Technical,39.00,true,Medicare 2025 rate`;
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rates_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -73,6 +151,25 @@ export default function RatesManagement() {
               View and manage reimbursement rates for CPT codes
             </p>
           </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={downloadTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </Button>
+              <Button onClick={() => document.getElementById('csv-upload')?.click()} disabled={bulkImportMutation.isPending}>
+                <Upload className="h-4 w-4 mr-2" />
+                {bulkImportMutation.isPending ? "Importing..." : "Import CSV"}
+              </Button>
+              <input
+                id="csv-upload"
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          )}
         </div>
 
         {/* Summary Cards */}

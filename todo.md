@@ -55,3 +55,4 @@
 - [x] Update Revenue Comparison chart to show Article 28 components in different colors (stacked bar)
 - [x] Add edit functionality to Rates Management page
 - [x] Add edit functionality to Multipliers page
+- [x] Add CSV bulk import feature for rates

@@ -211,6 +211,73 @@ export const appRouter = router({
         await db.deleteRate(input.id);
         return { success: true };
       }),
+    
+    bulkImport: adminProcedure
+      .input(z.object({
+        rates: z.array(z.object({
+          cptCode: z.string(),
+          siteType: z.enum(["FPA", "Article28"]),
+          component: z.enum(["Professional", "Technical", "Global"]),
+          rate: z.number(),
+          verified: z.boolean().default(false),
+          notes: z.string().optional(),
+        }))
+      }))
+      .mutation(async ({ input }) => {
+        const allCptCodes = await db.getAllCptCodes();
+        const cptCodeMap = new Map(allCptCodes.map(cpt => [cpt.code, cpt.id]));
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+        
+        for (const rateData of input.rates) {
+          try {
+            const cptCodeId = cptCodeMap.get(rateData.cptCode);
+            if (!cptCodeId) {
+              errors.push(`CPT code ${rateData.cptCode} not found`);
+              errorCount++;
+              continue;
+            }
+            
+            // Check if rate already exists
+            const existingRates = await db.getRatesByCptCode(cptCodeId);
+            const existingRate = existingRates.find(
+              r => r.siteType === rateData.siteType && r.component === rateData.component
+            );
+            
+            if (existingRate) {
+              // Update existing rate
+              await db.updateRate(existingRate.id, {
+                rate: rateData.rate,
+                verified: rateData.verified,
+                notes: rateData.notes,
+              });
+            } else {
+              // Create new rate
+              await db.createRate({
+                cptCodeId,
+                siteType: rateData.siteType,
+                component: rateData.component,
+                rate: rateData.rate,
+                verified: rateData.verified,
+                notes: rateData.notes,
+              });
+            }
+            successCount++;
+          } catch (error) {
+            errorCount++;
+            errors.push(`Error processing ${rateData.cptCode}: ${error}`);
+          }
+        }
+        
+        return {
+          success: errorCount === 0,
+          successCount,
+          errorCount,
+          errors,
+        };
+      }),
   }),
 
   // Payer Multiplier Management
