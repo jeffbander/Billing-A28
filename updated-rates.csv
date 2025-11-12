@@ -1,0 +1,69 @@
+cptCode,siteType,component,rate,verified,notes
+93306,FPA,Global,215.00,true,Updated Medicare 2025
+93306,FPA,Global,486.00,false,Commercial MCD
+93306,Article28,Professional,214.00,true,Updated Medicare 2025
+93306,Article28,Professional,72.00,false,Commercial MCD
+93306,Article28,Professional,120.00,false,Commercial MCD
+93306,Article28,Technical,53.00,true,Updated Medicare 2025
+93306,Article28,Technical,648.00,false,Commercial MCD
+93306,Article28,Technical,991.00,false,Commercial MCD
+93306,Article28,Technical,592.00,false,Commercial MCD
+99213,FPA,Global,80.00,true,Updated Medicare 2025
+99213,FPA,Global,134.00,false,Commercial MCD
+99213,Article28,Professional,98.00,true,Updated Medicare 2025
+99213,Article28,Professional,71.00,false,Commercial MCD
+99213,Article28,Professional,93.00,false,Commercial MCD
+99213,Article28,Technical,57.00,true,Updated Medicare 2025
+99213,Article28,Technical,152.00,false,Commercial MCD
+99213,Article28,Technical,312.00,false,Commercial MCD
+99213,Article28,Technical,166.00,false,Commercial MCD
+99214,FPA,Global,121.00,true,Updated Medicare 2025
+99214,FPA,Global,181.00,false,Commercial MCD
+99214,Article28,Professional,89.00,true,Updated Medicare 2025
+99214,Article28,Professional,89.00,false,Commercial MCD
+99214,Article28,Professional,133.00,false,Commercial MCD
+99214,Article28,Technical,87.00,true,Updated Medicare 2025
+99214,Article28,Technical,86.00,false,Commercial MCD
+99214,Article28,Technical,330.00,false,Commercial MCD
+99214,Article28,Technical,163.00,false,Commercial MCD
+99203,FPA,Global,98.00,true,Updated Medicare 2025
+99203,FPA,Global,158.00,false,Commercial MCD
+99203,Article28,Professional,97.00,true,Updated Medicare 2025
+99203,Article28,Professional,85.00,false,Commercial MCD
+99203,Article28,Professional,138.00,false,Commercial MCD
+99203,Article28,Technical,77.00,true,Updated Medicare 2025
+99203,Article28,Technical,323.00,false,Commercial MCD
+99203,Article28,Technical,157.00,false,Commercial MCD
+99204,FPA,Global,152.00,true,Updated Medicare 2025
+99204,FPA,Global,258.00,false,Commercial MCD
+99204,Article28,Professional,155.00,true,Updated Medicare 2025
+99204,Article28,Professional,189.00,false,Commercial MCD
+99204,Article28,Professional,321.00,false,Commercial MCD
+99204,Article28,Technical,153.00,true,Updated Medicare 2025
+99204,Article28,Technical,109.00,false,Commercial MCD
+99204,Article28,Technical,233.00,false,Commercial MCD
+99204,Article28,Technical,168.00,false,Commercial MCD
+99205,FPA,Global,209.00,true,Updated Medicare 2025
+99205,FPA,Global,290.00,false,Commercial MCD
+99205,Article28,Professional,204.00,true,Updated Medicare 2025
+99205,Article28,Professional,181.00,false,Commercial MCD
+99205,Article28,Professional,301.00,false,Commercial MCD
+99205,Article28,Technical,145.00,true,Updated Medicare 2025
+99205,Article28,Technical,320.00,false,Commercial MCD
+78452,FPA,Global,415.00,true,Updated Medicare 2025
+78452,FPA,Global,666.00,false,Commercial MCD
+78452,Article28,Professional,186.00,true,Updated Medicare 2025
+78452,Article28,Professional,67.00,false,Commercial MCD
+78452,Article28,Professional,98.00,false,Commercial MCD
+78452,Article28,Technical,67.00,true,Updated Medicare 2025
+78452,Article28,Technical,1474.00,false,Commercial MCD
+78452,Article28,Technical,1933.00,false,Commercial MCD
+78452,Article28,Technical,1063.00,false,Commercial MCD
+93351,FPA,Global,262.00,true,Updated Medicare 2025
+93351,FPA,Global,536.00,false,Commercial MCD
+93351,Article28,Professional,81.00,true,Updated Medicare 2025
+93351,Article28,Professional,151.00,false,Commercial MCD
+93351,Article28,Technical,80.00,true,Updated Medicare 2025
+93351,Article28,Technical,580.00,false,Commercial MCD
+93351,Article28,Technical,1772.00,false,Commercial MCD
+93351,Article28,Technical,492.00,false,Commercial MCD

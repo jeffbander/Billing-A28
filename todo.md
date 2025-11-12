@@ -56,3 +56,4 @@
 - [x] Add edit functionality to Rates Management page
 - [x] Add edit functionality to Multipliers page
 - [x] Add CSV bulk import feature for rates
+- [x] Update rates with new compensation values from user's image
