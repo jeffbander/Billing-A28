@@ -45,4 +45,7 @@
 - [x] Test all CRUD operations
 - [x] Test calculation accuracy
 - [x] Test scenario builder workflow
-- [ ] Create checkpoint for deployment
+- [x] Create checkpoint for deployment
+
+## Bug Fixes
+- [x] Fix React setState error in Home page navigation

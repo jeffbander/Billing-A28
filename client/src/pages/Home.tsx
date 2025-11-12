@@ -4,10 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getLoginUrl, APP_TITLE } from "@/const";
 import { useLocation } from "wouter";
 import { Calculator, BarChart3, Database, TrendingUp } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, setLocation]);
 
   if (loading) {
     return (
@@ -18,7 +25,6 @@ export default function Home() {
   }
 
   if (isAuthenticated) {
-    setLocation("/dashboard");
     return null;
   }
 
