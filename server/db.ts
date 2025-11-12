@@ -285,7 +285,9 @@ export async function createScenario(data: InsertScenario) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(scenarios).values(data);
-  return result;
+  // Extract insertId from the result
+  const insertId = (result as any)[0]?.insertId || (result as any).insertId;
+  return { insertId: insertId ? Number(insertId) : undefined };
 }
 
 export async function updateScenario(id: number, data: Partial<InsertScenario>) {

@@ -304,7 +304,11 @@ export const appRouter = router({
           article28Total: null,
         });
         
-        const scenarioId = Number((result as any).insertId);
+        const scenarioId = result.insertId;
+        
+        if (!scenarioId) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create scenario' });
+        }
         
         // Create scenario details
         for (const proc of procedures) {

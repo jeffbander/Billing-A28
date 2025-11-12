@@ -49,3 +49,4 @@
 
 ## Bug Fixes
 - [x] Fix React setState error in Home page navigation
+- [x] Fix scenario creation insertId error (NaN in scenario_details)
