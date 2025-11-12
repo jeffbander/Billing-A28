@@ -1,19 +1,72 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Plus } from "lucide-react";
+import { Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export default function Multipliers() {
+  const utils = trpc.useUtils();
   const { data: multipliers, isLoading } = trpc.multipliers.list.useQuery();
   const { data: payers } = trpc.payers.list.useQuery();
   const { data: user } = trpc.auth.me.useQuery();
   
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<{
+    professional: string;
+    technical: string;
+    global: string;
+  }>({ professional: "", technical: "", global: "" });
+  
   const isAdmin = user?.role === "admin";
+
+  const updateMutation = trpc.multipliers.update.useMutation({
+    onSuccess: () => {
+      utils.multipliers.list.invalidate();
+      toast.success("Multiplier updated successfully");
+      setEditingId(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update multiplier: ${error.message}`);
+    },
+  });
 
   const formatMultiplier = (value: number) => {
     return `${(value / 100).toFixed(2)}x`;
+  };
+
+  const handleEdit = (id: number, prof: number, tech: number, global: number) => {
+    setEditingId(id);
+    setEditValues({
+      professional: (prof / 100).toFixed(2),
+      technical: (tech / 100).toFixed(2),
+      global: (global / 100).toFixed(2),
+    });
+  };
+
+  const handleSave = (id: number) => {
+    const profCents = Math.round(parseFloat(editValues.professional) * 100);
+    const techCents = Math.round(parseFloat(editValues.technical) * 100);
+    const globalCents = Math.round(parseFloat(editValues.global) * 100);
+    
+    if (isNaN(profCents) || isNaN(techCents) || isNaN(globalCents)) {
+      toast.error("Please enter valid multiplier values");
+      return;
+    }
+    
+    updateMutation.mutate({
+      id,
+      professionalMultiplier: profCents,
+      technicalMultiplier: techCents,
+      globalMultiplier: globalCents,
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditValues({ professional: "", technical: "", global: "" });
   };
 
   if (isLoading) {
@@ -36,12 +89,6 @@ export default function Multipliers() {
               Default multipliers for calculating reimbursement rates
             </p>
           </div>
-          {isAdmin && (
-            <Button onClick={() => toast.info("Feature coming soon")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Multiplier
-            </Button>
-          )}
         </div>
 
         {/* Info Card */}
@@ -60,7 +107,7 @@ export default function Multipliers() {
           <CardHeader>
             <CardTitle>All Multipliers</CardTitle>
             <CardDescription>
-              Multipliers by payer type and specific payers
+              Multipliers by payer type and specific payers - Click edit to update values
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -73,28 +120,104 @@ export default function Multipliers() {
                     <th className="text-right p-3 font-medium">Technical (TC)</th>
                     <th className="text-right p-3 font-medium">Global</th>
                     <th className="text-left p-3 font-medium">Notes</th>
+                    {isAdmin && <th className="text-center p-3 font-medium">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {multipliers?.map((mult) => {
                     const payer = mult.payerId ? payers?.find(p => p.id === mult.payerId) : null;
                     const label = payer ? payer.payerName : mult.payerType || "Default";
+                    const isEditing = editingId === mult.id;
                     
                     return (
-                      <tr key={mult.id} className="border-b hover:bg-accent">
+                      <tr key={mult.id} className="border-b hover:bg-accent/50">
                         <td className="p-3 font-medium">{label}</td>
-                        <td className="p-3 text-right font-mono">
-                          {formatMultiplier(mult.professionalMultiplier)}
+                        <td className="p-3 text-right">
+                          {isEditing ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editValues.professional}
+                                onChange={(e) => setEditValues({...editValues, professional: e.target.value})}
+                                className="w-20 h-8 text-right font-mono"
+                              />
+                              <span className="text-sm">x</span>
+                            </div>
+                          ) : (
+                            <span className="font-mono">{formatMultiplier(mult.professionalMultiplier)}</span>
+                          )}
                         </td>
-                        <td className="p-3 text-right font-mono">
-                          {formatMultiplier(mult.technicalMultiplier)}
+                        <td className="p-3 text-right">
+                          {isEditing ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editValues.technical}
+                                onChange={(e) => setEditValues({...editValues, technical: e.target.value})}
+                                className="w-20 h-8 text-right font-mono"
+                              />
+                              <span className="text-sm">x</span>
+                            </div>
+                          ) : (
+                            <span className="font-mono">{formatMultiplier(mult.technicalMultiplier)}</span>
+                          )}
                         </td>
-                        <td className="p-3 text-right font-mono">
-                          {formatMultiplier(mult.globalMultiplier)}
+                        <td className="p-3 text-right">
+                          {isEditing ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editValues.global}
+                                onChange={(e) => setEditValues({...editValues, global: e.target.value})}
+                                className="w-20 h-8 text-right font-mono"
+                              />
+                              <span className="text-sm">x</span>
+                            </div>
+                          ) : (
+                            <span className="font-mono">{formatMultiplier(mult.globalMultiplier)}</span>
+                          )}
                         </td>
                         <td className="p-3 text-sm text-muted-foreground">
                           {mult.notes || "—"}
                         </td>
+                        {isAdmin && (
+                          <td className="p-3 text-center">
+                            {isEditing ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleSave(mult.id)}
+                                  disabled={updateMutation.isPending}
+                                >
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  onClick={handleCancel}
+                                  disabled={updateMutation.isPending}
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEdit(mult.id, mult.professionalMultiplier, mult.technicalMultiplier, mult.globalMultiplier)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
