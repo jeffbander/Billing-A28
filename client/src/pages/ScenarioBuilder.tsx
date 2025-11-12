@@ -17,11 +17,9 @@ export default function ScenarioBuilder() {
   const { data: cptCodes } = trpc.cptCodes.list.useQuery();
   
   const [scenarioName, setScenarioName] = useState("");
-  const [totalPatients, setTotalPatients] = useState("");
   const [medicarePercent, setMedicarePercent] = useState("40");
   const [commercialPercent, setCommercialPercent] = useState("40");
   const [medicaidPercent, setMedicaidPercent] = useState("20");
-  const [siteType, setSiteType] = useState<"FPA" | "Article28">("FPA");
   const [procedures, setProcedures] = useState<Array<{ cptCodeId: number; quantity: number }>>([]);
 
   const createScenario = trpc.scenarios.create.useMutation({
@@ -70,11 +68,11 @@ export default function ScenarioBuilder() {
 
     createScenario.mutate({
       providerName: scenarioName,
-      totalPatients: parseInt(totalPatients),
+      totalPatients: 100, // Default value
       medicarePercent: medicare,
       commercialPercent: commercial,
       medicaidPercent: medicaid,
-      siteType,
+      siteType: "FPA", // Default value
       procedures,
     });
   };
@@ -99,10 +97,10 @@ export default function ScenarioBuilder() {
             <CardHeader>
               <CardTitle>Scenario Name</CardTitle>
               <CardDescription>
-                Provider details and patient volume
+                Give your scenario a descriptive name
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="scenarioName">Scenario Name</Label>
                 <Input
@@ -112,32 +110,6 @@ export default function ScenarioBuilder() {
                   placeholder="e.g., High Commercial Mix Analysis"
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="totalPatients">Total Patients</Label>
-                <Input
-                  id="totalPatients"
-                  type="number"
-                  value={totalPatients}
-                  onChange={(e) => setTotalPatients(e.target.value)}
-                  placeholder="100"
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="siteType">Site Type</Label>
-                <Select value={siteType} onValueChange={(value) => setSiteType(value as "FPA" | "Article28")}>
-                  <SelectTrigger id="siteType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FPA">FPA (Freestanding Office)</SelectItem>
-                    <SelectItem value="Article28">Article 28 (Hospital Outpatient)</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>

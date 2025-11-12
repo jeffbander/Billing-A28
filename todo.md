@@ -63,3 +63,5 @@
 - [x] Rename "Provider Name" to "Scenario Name" in scenario builder
 - [x] Combine CPT code breakdown with visual comparison bars
 - [x] Make Article 28 Professional/Technical split values larger and more prominent
+- [x] Remove Total Patients field from scenario builder
+- [x] Remove Site Type field from scenario builder

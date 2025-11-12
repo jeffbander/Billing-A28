@@ -88,7 +88,7 @@ export default function ScenarioResults() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">{scenario.providerName}</h1>
             <p className="text-muted-foreground mt-1">
-              {scenario.totalPatients} patients • {scenario.medicarePercent}% Medicare, {scenario.commercialPercent}% Commercial, {scenario.medicaidPercent}% Medicaid
+              {scenario.medicarePercent}% Medicare, {scenario.commercialPercent}% Commercial, {scenario.medicaidPercent}% Medicaid
             </p>
           </div>
         </div>
