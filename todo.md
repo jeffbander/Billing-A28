@@ -60,3 +60,6 @@
 - [x] Remove Basic Information section from scenario results
 - [x] Add CPT code revenue breakdown summary
 - [x] Reorganize Article 28 Total display with Professional/Technical breakdown
+- [x] Rename "Provider Name" to "Scenario Name" in scenario builder
+- [x] Combine CPT code breakdown with visual comparison bars
+- [x] Make Article 28 Professional/Technical split values larger and more prominent

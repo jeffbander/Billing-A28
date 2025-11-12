@@ -80,7 +80,7 @@ export default function ScenarioResults() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header with just title */}
+        {/* Header with scenario name */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
@@ -100,7 +100,7 @@ export default function ScenarioResults() {
               <CardTitle className="text-sm font-medium text-muted-foreground">FPA Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-3xl font-bold text-blue-600">
                 {formatCurrency(result.fpaTotal)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Freestanding Office</p>
@@ -112,19 +112,19 @@ export default function ScenarioResults() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Article 28 Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-3xl font-bold text-purple-600">
                 {formatCurrency(result.article28Total)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Hospital Outpatient</p>
               {result.article28Professional > 0 && result.article28Technical > 0 && (
-                <div className="mt-3 pt-3 border-t space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Professional (26):</span>
-                    <span className="font-medium">{formatCurrency(result.article28Professional)}</span>
+                <div className="mt-4 pt-4 border-t space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Professional (26):</span>
+                    <span className="text-lg font-bold text-purple-700">{formatCurrency(result.article28Professional)}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Technical (TC):</span>
-                    <span className="font-medium">{formatCurrency(result.article28Technical)}</span>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Technical (TC):</span>
+                    <span className="text-lg font-bold text-purple-500">{formatCurrency(result.article28Technical)}</span>
                   </div>
                 </div>
               )}
@@ -136,63 +136,101 @@ export default function ScenarioResults() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Difference</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold flex items-center gap-2 ${isPositiveDifference ? "text-green-600" : "text-red-600"}`}>
-                {isPositiveDifference ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+              <div className={`text-3xl font-bold flex items-center gap-2 ${isPositiveDifference ? "text-green-600" : "text-red-600"}`}>
+                {isPositiveDifference ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
                 {formatCurrency(Math.abs(result.difference))}
               </div>
-              <p className={`text-xs mt-1 ${isPositiveDifference ? "text-green-700" : "text-red-700"}`}>
+              <p className={`text-sm mt-1 font-medium ${isPositiveDifference ? "text-green-700" : "text-red-700"}`}>
                 {formatPercent(Math.abs(result.percentDifference))} {isPositiveDifference ? "higher" : "lower"}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* CPT Code Breakdown */}
+        {/* Revenue Comparison by CPT Code */}
         {result.cptBreakdown && result.cptBreakdown.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Revenue by CPT Code</CardTitle>
+              <CardTitle>Revenue Comparison</CardTitle>
               <CardDescription>
                 Detailed breakdown showing revenue contribution for each procedure
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {result.cptBreakdown.map((cpt, index) => {
                   const cptDifference = cpt.article28Revenue - cpt.fpaRevenue;
                   const cptIsPositive = cptDifference > 0;
+                  const maxRevenue = Math.max(cpt.fpaRevenue, cpt.article28Revenue);
                   
                   return (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div key={index} className="space-y-3">
+                      {/* CPT Header */}
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-semibold text-lg">{cpt.cptCode}</div>
-                          <div className="text-sm text-muted-foreground">{cpt.cptDescription}</div>
-                          <div className="text-xs text-muted-foreground mt-1">Quantity: {cpt.quantity}</div>
+                          <div className="font-semibold text-lg">{cpt.cptCode} - {cpt.cptDescription}</div>
+                          <div className="text-sm text-muted-foreground">Quantity: {cpt.quantity}</div>
                         </div>
                         <div className={`text-right ${cptIsPositive ? "text-green-600" : "text-red-600"}`}>
-                          <div className="text-sm font-medium flex items-center gap-1">
+                          <div className="text-base font-bold flex items-center gap-1">
                             {cptIsPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                             {formatCurrency(Math.abs(cptDifference))}
                           </div>
-                          <div className="text-xs">difference</div>
+                          <div className="text-xs font-medium">difference</div>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="text-muted-foreground mb-1">FPA Revenue</div>
-                          <div className="font-semibold text-blue-600">{formatCurrency(cpt.fpaRevenue)}</div>
+                      {/* FPA Bar */}
+                      <div>
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-sm font-medium text-blue-700">FPA</span>
+                          <span className="text-sm font-bold text-blue-700">{formatCurrency(cpt.fpaRevenue)}</span>
                         </div>
-                        <div>
-                          <div className="text-muted-foreground mb-1">Article 28 Revenue</div>
-                          <div className="font-semibold text-purple-600">{formatCurrency(cpt.article28Revenue)}</div>
-                          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                            <div>Prof: {formatCurrency(cpt.article28Prof)}</div>
-                            <div>Tech: {formatCurrency(cpt.article28Tech)}</div>
+                        <div className="h-7 bg-blue-100 rounded-lg overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600"
+                            style={{
+                              width: `${(cpt.fpaRevenue / maxRevenue) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Article 28 Bar */}
+                      <div>
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-sm font-medium text-purple-700">Article 28</span>
+                          <span className="text-sm font-bold text-purple-700">{formatCurrency(cpt.article28Revenue)}</span>
+                        </div>
+                        <div className="h-7 bg-purple-100 rounded-lg overflow-hidden flex">
+                          <div
+                            className="h-full bg-purple-600"
+                            style={{
+                              width: `${(cpt.article28Prof / maxRevenue) * 100}%`,
+                            }}
+                            title={`Professional: ${formatCurrency(cpt.article28Prof)}`}
+                          />
+                          <div
+                            className="h-full bg-purple-400"
+                            style={{
+                              width: `${(cpt.article28Tech / maxRevenue) * 100}%`,
+                            }}
+                            title={`Technical: ${formatCurrency(cpt.article28Tech)}`}
+                          />
+                        </div>
+                        <div className="flex gap-4 mt-1.5 text-xs">
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-purple-600 rounded"></div>
+                            <span className="text-muted-foreground">Prof: {formatCurrency(cpt.article28Prof)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-purple-400 rounded"></div>
+                            <span className="text-muted-foreground">Tech: {formatCurrency(cpt.article28Tech)}</span>
                           </div>
                         </div>
                       </div>
+
+                      {index < result.cptBreakdown.length - 1 && <div className="border-b" />}
                     </div>
                   );
                 })}
@@ -200,80 +238,6 @@ export default function ScenarioResults() {
             </CardContent>
           </Card>
         )}
-
-        {/* Visual Comparison */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Comparison</CardTitle>
-            <CardDescription>
-              Visual comparison of total reimbursement between site types
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">FPA (Freestanding Office)</span>
-                  <span className="text-sm font-medium">{formatCurrency(result.fpaTotal)}</span>
-                </div>
-                <div className="h-8 bg-blue-100 rounded-lg overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600"
-                    style={{
-                      width: `${(result.fpaTotal / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Article 28 (Hospital Outpatient)</span>
-                  <span className="text-sm font-medium">{formatCurrency(result.article28Total)}</span>
-                </div>
-                <div className="h-8 bg-purple-100 rounded-lg overflow-hidden flex">
-                  {result.article28Professional > 0 && result.article28Technical > 0 ? (
-                    <>
-                      <div
-                        className="h-full bg-purple-600"
-                        style={{
-                          width: `${(result.article28Professional / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
-                        }}
-                        title={`Professional: ${formatCurrency(result.article28Professional)}`}
-                      />
-                      <div
-                        className="h-full bg-purple-400"
-                        style={{
-                          width: `${(result.article28Technical / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
-                        }}
-                        title={`Technical: ${formatCurrency(result.article28Technical)}`}
-                      />
-                    </>
-                  ) : (
-                    <div
-                      className="h-full bg-purple-600"
-                      style={{
-                        width: `${(result.article28Total / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
-                      }}
-                    />
-                  )}
-                </div>
-                {result.article28Professional > 0 && result.article28Technical > 0 && (
-                  <div className="flex gap-4 mt-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                      <span className="text-muted-foreground">Professional: {formatCurrency(result.article28Professional)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-purple-400 rounded"></div>
-                      <span className="text-muted-foreground">Technical: {formatCurrency(result.article28Technical)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   );

@@ -16,7 +16,7 @@ export default function ScenarioBuilder() {
   
   const { data: cptCodes } = trpc.cptCodes.list.useQuery();
   
-  const [providerName, setProviderName] = useState("");
+  const [scenarioName, setScenarioName] = useState("");
   const [totalPatients, setTotalPatients] = useState("");
   const [medicarePercent, setMedicarePercent] = useState("40");
   const [commercialPercent, setCommercialPercent] = useState("40");
@@ -69,7 +69,7 @@ export default function ScenarioBuilder() {
     }
 
     createScenario.mutate({
-      providerName,
+      providerName: scenarioName,
       totalPatients: parseInt(totalPatients),
       medicarePercent: medicare,
       commercialPercent: commercial,
@@ -97,19 +97,19 @@ export default function ScenarioBuilder() {
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+              <CardTitle>Scenario Name</CardTitle>
               <CardDescription>
                 Provider details and patient volume
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="providerName">Provider Name</Label>
+                <Label htmlFor="scenarioName">Scenario Name</Label>
                 <Input
-                  id="providerName"
-                  value={providerName}
-                  onChange={(e) => setProviderName(e.target.value)}
-                  placeholder="Dr. Smith"
+                  id="scenarioName"
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  placeholder="e.g., High Commercial Mix Analysis"
                   required
                 />
               </div>
