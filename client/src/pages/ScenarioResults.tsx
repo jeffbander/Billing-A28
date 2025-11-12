@@ -210,14 +210,45 @@ export default function ScenarioResults() {
                   <span className="text-sm font-medium">Article 28 (Hospital Outpatient)</span>
                   <span className="text-sm font-medium">{formatCurrency(result.article28Total)}</span>
                 </div>
-                <div className="h-8 bg-purple-100 rounded-lg overflow-hidden">
-                  <div
-                    className="h-full bg-purple-600"
-                    style={{
-                      width: `${(result.article28Total / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
-                    }}
-                  />
+                <div className="h-8 bg-purple-100 rounded-lg overflow-hidden flex">
+                  {result.article28Professional > 0 && result.article28Technical > 0 ? (
+                    <>
+                      <div
+                        className="h-full bg-purple-600"
+                        style={{
+                          width: `${(result.article28Professional / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
+                        }}
+                        title={`Professional: ${formatCurrency(result.article28Professional)}`}
+                      />
+                      <div
+                        className="h-full bg-purple-400"
+                        style={{
+                          width: `${(result.article28Technical / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
+                        }}
+                        title={`Technical: ${formatCurrency(result.article28Technical)}`}
+                      />
+                    </>
+                  ) : (
+                    <div
+                      className="h-full bg-purple-600"
+                      style={{
+                        width: `${(result.article28Total / Math.max(result.fpaTotal, result.article28Total)) * 100}%`,
+                      }}
+                    />
+                  )}
                 </div>
+                {result.article28Professional > 0 && result.article28Technical > 0 && (
+                  <div className="flex gap-4 mt-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-purple-600 rounded"></div>
+                      <span className="text-muted-foreground">Professional: {formatCurrency(result.article28Professional)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-purple-400 rounded"></div>
+                      <span className="text-muted-foreground">Technical: {formatCurrency(result.article28Technical)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
