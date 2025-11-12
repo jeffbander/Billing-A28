@@ -358,6 +358,8 @@ export const appRouter = router({
         
         let fpaTotal = 0;
         let article28Total = 0;
+        let article28Professional = 0;
+        let article28Technical = 0;
         
         // Calculate for each procedure
         for (const detail of scenario.details) {
@@ -405,7 +407,12 @@ export const appRouter = router({
           const techCommercial = article28TechBase * commercialPercent * (commercialMultiplier?.technicalMultiplier || 220) / 100;
           const techMedicaid = article28TechBase * medicaidPercent * (medicaidMultiplier?.technicalMultiplier || 80) / 100;
           
-          const article28WeightedRate = profMedicare + profCommercial + profMedicaid + techMedicare + techCommercial + techMedicaid;
+          const article28ProfWeightedRate = profMedicare + profCommercial + profMedicaid;
+          const article28TechWeightedRate = techMedicare + techCommercial + techMedicaid;
+          const article28WeightedRate = article28ProfWeightedRate + article28TechWeightedRate;
+          
+          article28Professional += article28ProfWeightedRate * detail.quantity;
+          article28Technical += article28TechWeightedRate * detail.quantity;
           article28Total += article28WeightedRate * detail.quantity;
         }
         
@@ -418,6 +425,8 @@ export const appRouter = router({
         return {
           fpaTotal,
           article28Total,
+          article28Professional,
+          article28Technical,
           difference: article28Total - fpaTotal,
           percentDifference: fpaTotal > 0 ? ((article28Total - fpaTotal) / fpaTotal) * 100 : 0,
         };

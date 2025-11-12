@@ -16,6 +16,8 @@ export default function ScenarioResults() {
   const [calculationResult, setCalculationResult] = useState<{
     fpaTotal: number;
     article28Total: number;
+    article28Professional: number;
+    article28Technical: number;
     difference: number;
     percentDifference: number;
   } | null>(null);
@@ -57,6 +59,8 @@ export default function ScenarioResults() {
   const result = calculationResult || {
     fpaTotal: scenario.fpaTotal || 0,
     article28Total: scenario.article28Total || 0,
+    article28Professional: 0,
+    article28Technical: 0,
     difference: (scenario.article28Total || 0) - (scenario.fpaTotal || 0),
     percentDifference: scenario.fpaTotal ? (((scenario.article28Total || 0) - (scenario.fpaTotal || 0)) / (scenario.fpaTotal || 1)) * 100 : 0,
   };
@@ -145,6 +149,18 @@ export default function ScenarioResults() {
                 {formatCurrency(result.article28Total)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Hospital Outpatient</p>
+              {result.article28Professional > 0 && result.article28Technical > 0 && (
+                <div className="mt-3 pt-3 border-t space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Professional (26):</span>
+                    <span className="font-medium">{formatCurrency(result.article28Professional)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Technical (TC):</span>
+                    <span className="font-medium">{formatCurrency(result.article28Technical)}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
