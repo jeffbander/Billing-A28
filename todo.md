@@ -65,3 +65,4 @@
 - [x] Make Article 28 Professional/Technical split values larger and more prominent
 - [x] Remove Total Patients field from scenario builder
 - [x] Remove Site Type field from scenario builder
+- [x] Update Multipliers page to clearly show insurance types (Medicare, Commercial, Medicaid) for Global/FPA and A28 components

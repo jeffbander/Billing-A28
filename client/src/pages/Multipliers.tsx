@@ -10,7 +10,6 @@ import { useState } from "react";
 export default function Multipliers() {
   const utils = trpc.useUtils();
   const { data: multipliers, isLoading } = trpc.multipliers.list.useQuery();
-  const { data: payers } = trpc.payers.list.useQuery();
   const { data: user } = trpc.auth.me.useQuery();
   
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -82,226 +81,154 @@ export default function Multipliers() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Payer Multipliers</h1>
-            <p className="text-muted-foreground mt-2">
-              Default multipliers for calculating reimbursement rates
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Reimbursement Rate Multipliers</h1>
+          <p className="text-muted-foreground mt-2">
+            Multipliers applied to Medicare base rates for different insurance types
+          </p>
         </div>
 
-        {/* Info Card */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <p className="text-sm text-blue-900">
-              <strong>How multipliers work:</strong> These values are applied to Medicare base rates 
-              to estimate commercial and Medicaid reimbursement when specific payer rates are not available. 
-              For example, a 1.40x professional multiplier means the commercial rate is 140% of the Medicare rate.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Multipliers Table */}
+        {/* Global / FPA Section */}
         <Card>
           <CardHeader>
-            <CardTitle>All Multipliers</CardTitle>
+            <CardTitle>Global / FPA (Freestanding Office)</CardTitle>
             <CardDescription>
-              Multipliers by payer type and specific payers - Click edit to update values
+              Single multiplier applied to the global rate for each insurance type
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Payer / Type</th>
-                    <th className="text-right p-3 font-medium">Professional (26)</th>
-                    <th className="text-right p-3 font-medium">Technical (TC)</th>
-                    <th className="text-right p-3 font-medium">Global</th>
-                    <th className="text-left p-3 font-medium">Notes</th>
-                    {isAdmin && <th className="text-center p-3 font-medium">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {multipliers?.map((mult) => {
-                    const payer = mult.payerId ? payers?.find(p => p.id === mult.payerId) : null;
-                    const label = payer ? payer.payerName : mult.payerType || "Default";
-                    const isEditing = editingId === mult.id;
-                    
-                    return (
-                      <tr key={mult.id} className="border-b hover:bg-accent/50">
-                        <td className="p-3 font-medium">{label}</td>
-                        <td className="p-3 text-right">
-                          {isEditing ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={editValues.professional}
-                                onChange={(e) => setEditValues({...editValues, professional: e.target.value})}
-                                className="w-20 h-8 text-right font-mono"
-                              />
-                              <span className="text-sm">x</span>
-                            </div>
-                          ) : (
-                            <span className="font-mono">{formatMultiplier(mult.professionalMultiplier)}</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          {isEditing ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={editValues.technical}
-                                onChange={(e) => setEditValues({...editValues, technical: e.target.value})}
-                                className="w-20 h-8 text-right font-mono"
-                              />
-                              <span className="text-sm">x</span>
-                            </div>
-                          ) : (
-                            <span className="font-mono">{formatMultiplier(mult.technicalMultiplier)}</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          {isEditing ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={editValues.global}
-                                onChange={(e) => setEditValues({...editValues, global: e.target.value})}
-                                className="w-20 h-8 text-right font-mono"
-                              />
-                              <span className="text-sm">x</span>
-                            </div>
-                          ) : (
-                            <span className="font-mono">{formatMultiplier(mult.globalMultiplier)}</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {mult.notes || "—"}
-                        </td>
-                        {isAdmin && (
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleSave(mult.id)}
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <Check className="h-4 w-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  onClick={handleCancel}
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <X className="h-4 w-4 text-red-600" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleEdit(mult.id, mult.professionalMultiplier, mult.technicalMultiplier, mult.globalMultiplier)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </td>
+            <div className="space-y-4">
+              {multipliers?.map((mult) => (
+                <div key={mult.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{mult.payerType}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {mult.payerType === 'Medicare' && 'Federal health insurance program'}
+                        {mult.payerType === 'Commercial' && 'Private insurance companies'}
+                        {mult.payerType === 'Medicaid' && 'State health insurance program'}
+                      </p>
+                    </div>
+                    {isAdmin && editingId !== mult.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(mult.id, mult.professionalMultiplier, mult.technicalMultiplier, mult.globalMultiplier)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {editingId === mult.id && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSave(mult.id)}
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleCancel}
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-blue-50 rounded p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-900">Global Multiplier:</span>
+                      {editingId === mult.id ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editValues.global}
+                          onChange={(e) => setEditValues({ ...editValues, global: e.target.value })}
+                          className="w-24 text-right"
+                        />
+                      ) : (
+                        <span className="text-lg font-bold text-blue-700">{formatMultiplier(mult.globalMultiplier)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Article 28 Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Article 28 (Hospital Outpatient)</CardTitle>
+            <CardDescription>
+              Separate multipliers for Professional (26) and Technical (TC) components for each insurance type
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {multipliers?.map((mult) => (
+                <div key={`a28-${mult.id}`} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{mult.payerType}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {mult.payerType === 'Medicare' && 'Federal health insurance program'}
+                        {mult.payerType === 'Commercial' && 'Private insurance companies'}
+                        {mult.payerType === 'Medicaid' && 'State health insurance program'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="bg-purple-50 rounded p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-purple-900">Professional (26):</span>
+                        {editingId === mult.id ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editValues.professional}
+                            onChange={(e) => setEditValues({ ...editValues, professional: e.target.value })}
+                            className="w-24 text-right"
+                          />
+                        ) : (
+                          <span className="text-lg font-bold text-purple-700">{formatMultiplier(mult.professionalMultiplier)}</span>
                         )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-purple-50 rounded p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-purple-900">Technical (TC):</span>
+                        {editingId === mult.id ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editValues.technical}
+                            onChange={(e) => setEditValues({ ...editValues, technical: e.target.value })}
+                            className="w-24 text-right"
+                          />
+                        ) : (
+                          <span className="text-lg font-bold text-purple-700">{formatMultiplier(mult.technicalMultiplier)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Reference Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Reference: Default Multipliers from PRD</CardTitle>
-            <CardDescription>
-              Standard multipliers based on Milliman/KFF 2025 data
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 font-medium">Payer Type</th>
-                    <th className="text-right p-2 font-medium">Prof (26)</th>
-                    <th className="text-right p-2 font-medium">Tech (TC)</th>
-                    <th className="text-right p-2 font-medium">Global</th>
-                    <th className="text-left p-2 font-medium">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="text-muted-foreground">
-                  <tr className="border-b">
-                    <td className="p-2">Medicare</td>
-                    <td className="p-2 text-right">1.00x</td>
-                    <td className="p-2 text-right">1.00x</td>
-                    <td className="p-2 text-right">1.00x</td>
-                    <td className="p-2">Baseline reference</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Commercial</td>
-                    <td className="p-2 text-right">1.40x</td>
-                    <td className="p-2 text-right">2.20x</td>
-                    <td className="p-2 text-right">1.65x</td>
-                    <td className="p-2">Milliman/KFF 2025 averages</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Medicaid</td>
-                    <td className="p-2 text-right">0.80x</td>
-                    <td className="p-2 text-right">0.80x</td>
-                    <td className="p-2 text-right">0.80x</td>
-                    <td className="p-2">Conservative baseline</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">BCBS</td>
-                    <td className="p-2 text-right">1.45x</td>
-                    <td className="p-2 text-right">2.00x</td>
-                    <td className="p-2 text-right">1.65x</td>
-                    <td className="p-2">Typical NY rates</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Aetna</td>
-                    <td className="p-2 text-right">1.40x</td>
-                    <td className="p-2 text-right">2.10x</td>
-                    <td className="p-2 text-right">1.65x</td>
-                    <td className="p-2">Market estimate</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">UHC</td>
-                    <td className="p-2 text-right">1.50x</td>
-                    <td className="p-2 text-right">2.20x</td>
-                    <td className="p-2 text-right">1.70x</td>
-                    <td className="p-2">NYC range</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2">Cigna</td>
-                    <td className="p-2 text-right">1.55x</td>
-                    <td className="p-2 text-right">2.15x</td>
-                    <td className="p-2 text-right">1.70x</td>
-                    <td className="p-2">Common PPO assumption</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {!isAdmin && (
+          <p className="text-sm text-muted-foreground text-center">
+            Contact an administrator to modify multiplier values
+          </p>
+        )}
       </div>
     </DashboardLayout>
   );
