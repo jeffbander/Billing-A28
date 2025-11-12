@@ -427,6 +427,15 @@ export const appRouter = router({
         let article28Total = 0;
         let article28Professional = 0;
         let article28Technical = 0;
+        const cptBreakdown: Array<{
+          cptCode: string;
+          cptDescription: string;
+          quantity: number;
+          fpaRevenue: number;
+          article28Revenue: number;
+          article28Prof: number;
+          article28Tech: number;
+        }> = [];
         
         // Calculate for each procedure
         for (const detail of scenario.details) {
@@ -478,9 +487,25 @@ export const appRouter = router({
           const article28TechWeightedRate = techMedicare + techCommercial + techMedicaid;
           const article28WeightedRate = article28ProfWeightedRate + article28TechWeightedRate;
           
-          article28Professional += article28ProfWeightedRate * detail.quantity;
-          article28Technical += article28TechWeightedRate * detail.quantity;
-          article28Total += article28WeightedRate * detail.quantity;
+          const fpaRevenue = fpaWeightedRate * detail.quantity;
+          const article28ProfRevenue = article28ProfWeightedRate * detail.quantity;
+          const article28TechRevenue = article28TechWeightedRate * detail.quantity;
+          const article28Revenue = article28WeightedRate * detail.quantity;
+          
+          article28Professional += article28ProfRevenue;
+          article28Technical += article28TechRevenue;
+          article28Total += article28Revenue;
+          fpaTotal += fpaRevenue;
+          
+          cptBreakdown.push({
+            cptCode: detail.cptCode || '',
+            cptDescription: detail.cptDescription || '',
+            quantity: detail.quantity,
+            fpaRevenue,
+            article28Revenue,
+            article28Prof: article28ProfRevenue,
+            article28Tech: article28TechRevenue,
+          });
         }
         
         // Update scenario with calculated totals
@@ -496,6 +521,7 @@ export const appRouter = router({
           article28Technical,
           difference: article28Total - fpaTotal,
           percentDifference: fpaTotal > 0 ? ((article28Total - fpaTotal) / fpaTotal) * 100 : 0,
+          cptBreakdown,
         };
       }),
   }),

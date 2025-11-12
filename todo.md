@@ -57,3 +57,6 @@
 - [x] Add edit functionality to Multipliers page
 - [x] Add CSV bulk import feature for rates
 - [x] Update rates with new compensation values from user's image
+- [x] Remove Basic Information section from scenario results
+- [x] Add CPT code revenue breakdown summary
+- [x] Reorganize Article 28 Total display with Professional/Technical breakdown

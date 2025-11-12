@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, Calculator, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -20,6 +20,15 @@ export default function ScenarioResults() {
     article28Technical: number;
     difference: number;
     percentDifference: number;
+    cptBreakdown: Array<{
+      cptCode: string;
+      cptDescription: string;
+      quantity: number;
+      fpaRevenue: number;
+      article28Revenue: number;
+      article28Prof: number;
+      article28Tech: number;
+    }>;
   } | null>(null);
   
   const calculateMutation = trpc.scenarios.calculate.useMutation({
@@ -63,6 +72,7 @@ export default function ScenarioResults() {
     article28Technical: 0,
     difference: (scenario.article28Total || 0) - (scenario.fpaTotal || 0),
     percentDifference: scenario.fpaTotal ? (((scenario.article28Total || 0) - (scenario.fpaTotal || 0)) / (scenario.fpaTotal || 1)) * 100 : 0,
+    cptBreakdown: [],
   };
 
   const isPositiveDifference = result.difference > 0;
@@ -70,61 +80,18 @@ export default function ScenarioResults() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header with just title */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Scenario Results</h1>
-            <p className="text-muted-foreground mt-1">{scenario.providerName}</p>
+            <h1 className="text-3xl font-bold text-foreground">{scenario.providerName}</h1>
+            <p className="text-muted-foreground mt-1">
+              {scenario.totalPatients} patients • {scenario.medicarePercent}% Medicare, {scenario.commercialPercent}% Commercial, {scenario.medicaidPercent}% Medicaid
+            </p>
           </div>
         </div>
-
-        {/* Scenario Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Scenario Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-3">Basic Information</h4>
-                <dl className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Provider:</dt>
-                    <dd className="font-medium">{scenario.providerName}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Total Patients:</dt>
-                    <dd className="font-medium">{scenario.totalPatients}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Site Type:</dt>
-                    <dd className="font-medium">{scenario.siteType}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">Payer Mix</h4>
-                <dl className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Medicare:</dt>
-                    <dd className="font-medium">{scenario.medicarePercent}%</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Commercial:</dt>
-                    <dd className="font-medium">{scenario.commercialPercent}%</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Medicaid:</dt>
-                    <dd className="font-medium">{scenario.medicaidPercent}%</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Comparison Results */}
         <div className="grid md:grid-cols-3 gap-6">
@@ -180,12 +147,66 @@ export default function ScenarioResults() {
           </Card>
         </div>
 
+        {/* CPT Code Breakdown */}
+        {result.cptBreakdown && result.cptBreakdown.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue by CPT Code</CardTitle>
+              <CardDescription>
+                Detailed breakdown showing revenue contribution for each procedure
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {result.cptBreakdown.map((cpt, index) => {
+                  const cptDifference = cpt.article28Revenue - cpt.fpaRevenue;
+                  const cptIsPositive = cptDifference > 0;
+                  
+                  return (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-lg">{cpt.cptCode}</div>
+                          <div className="text-sm text-muted-foreground">{cpt.cptDescription}</div>
+                          <div className="text-xs text-muted-foreground mt-1">Quantity: {cpt.quantity}</div>
+                        </div>
+                        <div className={`text-right ${cptIsPositive ? "text-green-600" : "text-red-600"}`}>
+                          <div className="text-sm font-medium flex items-center gap-1">
+                            {cptIsPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                            {formatCurrency(Math.abs(cptDifference))}
+                          </div>
+                          <div className="text-xs">difference</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-muted-foreground mb-1">FPA Revenue</div>
+                          <div className="font-semibold text-blue-600">{formatCurrency(cpt.fpaRevenue)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground mb-1">Article 28 Revenue</div>
+                          <div className="font-semibold text-purple-600">{formatCurrency(cpt.article28Revenue)}</div>
+                          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                            <div>Prof: {formatCurrency(cpt.article28Prof)}</div>
+                            <div>Tech: {formatCurrency(cpt.article28Tech)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Visual Comparison */}
         <Card>
           <CardHeader>
             <CardTitle>Revenue Comparison</CardTitle>
             <CardDescription>
-              Visual comparison of reimbursement between site types
+              Visual comparison of total reimbursement between site types
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -249,58 +270,6 @@ export default function ScenarioResults() {
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Procedure Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Procedure Mix</CardTitle>
-            <CardDescription>
-              CPT codes and quantities used in this scenario
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">CPT Code</th>
-                    <th className="text-left p-3 font-medium">Description</th>
-                    <th className="text-right p-3 font-medium">Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scenario.details.map((detail) => (
-                    <tr key={detail.id} className="border-b">
-                      <td className="p-3 font-mono text-sm">{detail.cptCode}</td>
-                      <td className="p-3 text-sm">{detail.cptDescription}</td>
-                      <td className="p-3 text-right font-medium">{detail.quantity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Summary Card */}
-        <Card className="bg-gradient-to-br from-teal-50 to-blue-50 border-teal-200">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-white rounded-lg">
-                <Calculator className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">Analysis Summary</h3>
-                <p className="text-sm text-muted-foreground">
-                  Based on the payer mix and procedure volumes in this scenario, Article 28 (Hospital Outpatient) 
-                  reimbursement is <strong>{formatCurrency(Math.abs(result.difference))}</strong> ({formatPercent(Math.abs(result.percentDifference))}) 
-                  {isPositiveDifference ? " higher" : " lower"} than FPA (Freestanding Office) reimbursement. 
-                  This difference is primarily driven by the technical component rates in Article 28 settings.
-                </p>
               </div>
             </div>
           </CardContent>
