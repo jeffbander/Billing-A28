@@ -26,6 +26,8 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { GuestModeBadge } from "./GuestModeBadge";
+import { isGuestMode } from "@/lib/guestSession";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -49,11 +51,25 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  // Bypass authentication - create mock user for public access
-  const user = {
+  const { user: authUser, loading, isAuthenticated } = useAuth();
+  const isGuest = isGuestMode();
+  
+  // Support both authenticated users and guest mode
+  const user = authUser || (isGuest ? {
     name: "Guest User",
-    email: "guest@mountsinai.org",
-  };
+    email: "guest@example.com",
+    role: "user" as const
+  } : null);
+  
+  if (loading) {
+    return <DashboardLayoutSkeleton />;
+  }
+  
+  // Redirect to home if not authenticated and not in guest mode
+  if (!user && !isGuest) {
+    window.location.href = "/";
+    return null;
+  }
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -265,6 +281,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <GuestModeBadge />
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>

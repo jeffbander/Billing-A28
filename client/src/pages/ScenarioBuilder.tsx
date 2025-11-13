@@ -14,7 +14,23 @@ export default function ScenarioBuilder() {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   
-  const { data: cptCodes } = trpc.cptCodes.list.useQuery();
+  const { data: rates } = trpc.rates.listWithDetails.useQuery();
+  
+  // Extract unique CPT codes from rates
+  const cptCodes = useMemo(() => {
+    if (!rates) return [];
+    const uniqueCodes = new Map<number, { id: number; code: string; description: string }>();
+    rates.forEach(rate => {
+      if (!uniqueCodes.has(rate.cptCodeId) && rate.cptCode && rate.cptDescription) {
+        uniqueCodes.set(rate.cptCodeId, {
+          id: rate.cptCodeId,
+          code: rate.cptCode,
+          description: rate.cptDescription
+        });
+      }
+    });
+    return Array.from(uniqueCodes.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }, [rates]);
   
   const [scenarioName, setScenarioName] = useState("");
   const [medicarePercent, setMedicarePercent] = useState("40");

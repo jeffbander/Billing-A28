@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { getGuestSessionId } from "@/lib/guestSession";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,15 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      headers() {
+        const guestSessionId = getGuestSessionId();
+        if (guestSessionId) {
+          return {
+            'x-guest-session-id': guestSessionId,
+          };
+        }
+        return {};
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

@@ -5,13 +5,14 @@ import { getLoginUrl, APP_TITLE } from "@/const";
 import { useLocation } from "wouter";
 import { Calculator, BarChart3, Database, TrendingUp } from "lucide-react";
 import { useEffect } from "react";
+import { startGuestSession, isGuestMode } from "@/lib/guestSession";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated || isGuestMode()) {
       setLocation("/dashboard");
     }
   }, [isAuthenticated, setLocation]);
@@ -55,14 +56,18 @@ export default function Home() {
           </p>
           <div className="flex gap-4 justify-center pt-4">
             <Button size="lg" asChild>
-              <a href={getLoginUrl()}>Get Started</a>
+              <a href={getLoginUrl()}>Sign In</a>
             </Button>
             <Button size="lg" variant="outline" onClick={() => {
-              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+              startGuestSession();
+              setLocation('/dashboard');
             }}>
-              Learn More
+              Continue as Guest
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Guest mode: Full access, session-only data (not saved)
+          </p>
         </div>
       </section>
 
