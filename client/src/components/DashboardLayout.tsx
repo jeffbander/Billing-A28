@@ -242,6 +242,11 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
+                <img
+                  src={APP_LOGO}
+                  alt={APP_TITLE}
+                  className="h-8 w-8 rounded-md object-cover ring-1 ring-border"
+                />
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
                     {activeMenuItem?.label ?? APP_TITLE}
