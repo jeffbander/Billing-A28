@@ -120,7 +120,8 @@ export default function RatesManagement() {
 
   const renderRateCell = (rate: any) => {
     if (!rate) {
-      return <span className="text-sm text-muted-foreground">Not set</span>;
+      // Show $0.00 for missing rates
+      return <span className="text-lg font-semibold text-muted-foreground">$0.00</span>;
     }
 
     if (editingId === rate.id) {

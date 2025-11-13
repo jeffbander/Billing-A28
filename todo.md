@@ -78,3 +78,4 @@
 - [x] Fix missing pencil icons for Commercial and Medicaid rates
 - [ ] Debug why Commercial and Medicaid rates still not showing pencil icons in Manage Rates
 - [x] Create simple, clear interface for editing Commercial and Medicaid rates
+- [x] Replace "Not set" rates with $0.00 display
