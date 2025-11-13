@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
-import { getGuestSessionId } from "@/lib/guestSession";
+import { getGuestSessionId, isGuestMode } from "@/lib/guestSession";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -19,7 +19,13 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  // Don't redirect if in guest mode - guests are allowed to be "unauthorized"
+  if (isGuestMode()) {
+    return;
+  }
+
+  // Redirect to our auth page instead of external login
+  window.location.href = "/auth";
 };
 
 queryClient.getQueryCache().subscribe(event => {

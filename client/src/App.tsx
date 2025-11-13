@@ -11,12 +11,16 @@ import PayersManagement from "./pages/PayersManagement";
 import ScenarioBuilder from "./pages/ScenarioBuilder";
 import ScenarioResults from "./pages/ScenarioResults.tsx";
 import AdminPanel from "./pages/AdminPanel";
+import AuthPage from "./pages/AuthPage";
+import GuestRedirect from "./pages/GuestRedirect";
 
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/auth"} component={AuthPage} />
+      <Route path={"/guest"} component={GuestRedirect} />
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/rates"} component={RatesManagement} />
       <Route path={"/payers"} component={PayersManagement} />

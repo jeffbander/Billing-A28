@@ -96,13 +96,16 @@
 - [x] Add role management API endpoints (set-role)
 - [x] Update rate editing to distinguish admin vs user/guest edits
 - [x] Implement session data loading on login (load admin dataset)
-- [ ] Create guest session management utility
-- [ ] Add "Continue as Guest" button to login page
-- [ ] Create subtle "Guest Mode Active" badge in header (no warnings)
-- [ ] Update backend context to handle guest sessions
-- [ ] Hide Admin Panel from guest users in navigation
+- [x] Create guest session management utility
+- [x] Add "Continue as Guest" button to login page
+- [x] Create subtle "Guest Mode Active" badge in header (no warnings)
+- [x] Update backend context to handle guest sessions
+- [x] Hide Admin Panel from guest users in navigation
 - [x] Bootstrap admin role for jeffrey_bander@post.harvard.edu
 - [ ] Test admin edits persist globally
 - [ ] Test user/guest edits are session-only
 - [ ] Test role promotion/demotion functionality
-- [ ] Update Scenario Builder to pull CPT codes from Reimbursement Rates instead of CPT codes table
+- [x] Update Scenario Builder to pull CPT codes from Reimbursement Rates instead of CPT codes table
+- [ ] Fix guest mode button on home page to properly start guest session
+- [ ] Add guest mode option to OAuth sign-in page
+- [ ] Test guest mode works from both entry points

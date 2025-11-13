@@ -51,6 +51,7 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
+  const [, setLocation] = useLocation();
   const { user: authUser, loading, isAuthenticated } = useAuth();
   const isGuest = isGuestMode();
   
@@ -61,19 +62,25 @@ export default function DashboardLayout({
     role: "user" as const
   } : null);
   
+  // Save sidebar width to localStorage
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
+  }, [sidebarWidth]);
+  
+  // Redirect to auth page if not authenticated and not in guest mode
+  useEffect(() => {
+    if (!loading && !user && !isGuest) {
+      setLocation("/auth");
+    }
+  }, [loading, user, isGuest, setLocation]);
+  
   if (loading) {
     return <DashboardLayoutSkeleton />;
   }
   
-  // Redirect to home if not authenticated and not in guest mode
   if (!user && !isGuest) {
-    window.location.href = "/";
-    return null;
+    return <DashboardLayoutSkeleton />;
   }
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
 
   return (
     <SidebarProvider
