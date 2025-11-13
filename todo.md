@@ -74,3 +74,4 @@
 - [x] Remove Multipliers page from navigation
 - [x] Update CSV import/export to handle new rate structure
 - [x] Verify Commercial and Medicaid rates are editable in Rates Management page
+- [x] Fix issue: Commercial and Medicaid rates not editable in UI
