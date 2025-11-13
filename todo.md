@@ -73,3 +73,4 @@
 - [x] Update Rates Management UI to show 9 rates per CPT code grouped by payer type
 - [x] Remove Multipliers page from navigation
 - [x] Update CSV import/export to handle new rate structure
+- [x] Verify Commercial and Medicaid rates are editable in Rates Management page
