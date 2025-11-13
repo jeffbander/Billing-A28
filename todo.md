@@ -84,3 +84,4 @@
 - [x] Add ability to add new CPT codes in Manage Rates
 - [x] Add ability to delete CPT codes in Manage Rates
 - [x] Update rates for CPT codes from user's new rate table (93306, 99213, 99214, 99203, 99204, 99205, 78452, 93351)
+- [x] Update site logo to Mount Sinai Fuster Heart Hospital logo
