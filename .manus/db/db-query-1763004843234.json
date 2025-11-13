@@ -1,0 +1,199 @@
+{
+  "query": "SELECT cptCodeId, siteType, component, payerType, rate FROM rates ORDER BY cptCodeId, siteType, component, payerType LIMIT 30",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT cptCodeId, siteType, component, payerType, rate FROM rates ORDER BY cptCodeId, siteType, component, payerType LIMIT 30",
+  "rows": [
+    {
+      "cptCodeId": "1",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "13400"
+    },
+    {
+      "cptCodeId": "1",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "9300"
+    },
+    {
+      "cptCodeId": "1",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "16600"
+    },
+    {
+      "cptCodeId": "2",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "18100"
+    },
+    {
+      "cptCodeId": "2",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "13300"
+    },
+    {
+      "cptCodeId": "2",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "16300"
+    },
+    {
+      "cptCodeId": "3",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "21500"
+    },
+    {
+      "cptCodeId": "3",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "12000"
+    },
+    {
+      "cptCodeId": "3",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "59200"
+    },
+    {
+      "cptCodeId": "4",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "53600"
+    },
+    {
+      "cptCodeId": "4",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "15100"
+    },
+    {
+      "cptCodeId": "4",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "49200"
+    },
+    {
+      "cptCodeId": "5",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "1700"
+    },
+    {
+      "cptCodeId": "5",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "800"
+    },
+    {
+      "cptCodeId": "5",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "900"
+    },
+    {
+      "cptCodeId": "30001",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "15800"
+    },
+    {
+      "cptCodeId": "30001",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "13800"
+    },
+    {
+      "cptCodeId": "30001",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "15700"
+    },
+    {
+      "cptCodeId": "30002",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "25800"
+    },
+    {
+      "cptCodeId": "30002",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "32100"
+    },
+    {
+      "cptCodeId": "30002",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "16800"
+    },
+    {
+      "cptCodeId": "30003",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "29000"
+    },
+    {
+      "cptCodeId": "30003",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "30100"
+    },
+    {
+      "cptCodeId": "30003",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "32000"
+    },
+    {
+      "cptCodeId": "30004",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "rate": "41500"
+    },
+    {
+      "cptCodeId": "30004",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "rate": "9800"
+    },
+    {
+      "cptCodeId": "30004",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "rate": "106300"
+    }
+  ],
+  "messages": [],
+  "stdout": "cptCodeId\tsiteType\tcomponent\tpayerType\trate\n1\tFPA\tGlobal\tMedicare\t13400\n1\tArticle28\tProfessional\tMedicare\t9300\n1\tArticle28\tTechnical\tMedicare\t16600\n2\tFPA\tGlobal\tMedicare\t18100\n2\tArticle28\tProfessional\tMedicare\t13300\n2\tArticle28\tTechnical\tMedicare\t16300\n3\tFPA\tGlobal\tMedicare\t21500\n3\tArticle28\tProfessional\tMedicare\t12000\n3\tArticle28\tTechnical\tMedicare\t59200\n4\tFPA\tGlobal\tMedicare\t53600\n4\tArticle28\tProfessional\tMedicare\t15100\n4\tArticle28\tTechnical\tMedicare\t49200\n5\tFPA\tGlobal\tMedicare\t1700\n5\tArticle28\tProfessional\tMedicare\t800\n5\tArticle28\tTechnical\tMedicare\t900\n30001\tFPA\tGlobal\tMedicare\t15800\n30001\tArticle28\tProfessional\tMedicare\t13800\n30001\tArticle28\tTechnical\tMedicare\t15700\n30002\tFPA\tGlobal\tMedicare\t25800\n30002\tArticle28\tProfessional\tMedicare\t32100\n30002\tArticle28\tTechnical\tMedicare\t16800\n30003\tFPA\tGlobal\tMedicare\t29000\n30003\tArticle28\tProfessional\tMedicare\t30100\n30003\tArticle28\tTechnical\tMedicare\t32000\n30004\tFPA\tGlobal\tMedicare\t41500\n30004\tArticle28\tProfessional\tMedicare\t9800\n30004\tArticle28\tTechnical\tMedicare\t106300\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

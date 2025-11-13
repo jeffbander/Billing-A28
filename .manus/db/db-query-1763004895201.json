@@ -1,0 +1,40 @@
+{
+  "query": "SELECT COUNT(*) as total_rates, siteType, component, payerType FROM rates GROUP BY siteType, component, payerType ORDER BY siteType, component, payerType",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT COUNT(*) as total_rates, siteType, component, payerType FROM rates GROUP BY siteType, component, payerType ORDER BY siteType, component, payerType",
+  "rows": [
+    {
+      "total_rates": "9",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare"
+    },
+    {
+      "total_rates": "1",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Commercial"
+    },
+    {
+      "total_rates": "1",
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicaid"
+    },
+    {
+      "total_rates": "9",
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare"
+    },
+    {
+      "total_rates": "9",
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_rates\tsiteType\tcomponent\tpayerType\n9\tFPA\tGlobal\tMedicare\n1\tFPA\tGlobal\tCommercial\n1\tFPA\tGlobal\tMedicaid\n9\tArticle28\tProfessional\tMedicare\n9\tArticle28\tTechnical\tMedicare\n",
+  "stderr": "",
+  "execution_time_ms": 47
+}
