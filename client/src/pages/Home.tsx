@@ -7,26 +7,12 @@ import { Calculator, BarChart3, Database, TrendingUp } from "lucide-react";
 import { useEffect } from "react";
 
 export default function Home() {
-  const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Bypass authentication - redirect directly to dashboard
   useEffect(() => {
-    if (isAuthenticated) {
-      setLocation("/dashboard");
-    }
-  }, [isAuthenticated, setLocation]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return null;
-  }
+    setLocation("/dashboard");
+  }, [setLocation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50">

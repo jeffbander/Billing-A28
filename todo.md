@@ -87,3 +87,4 @@
 - [x] Update site logo to Mount Sinai Fuster Heart Hospital logo
 - [x] Bypass authentication to allow public access without login
 - [x] Add Mount Sinai logo to mobile header next to sidebar trigger
+- [x] Completely remove all authentication checks to eliminate sign-in requirement

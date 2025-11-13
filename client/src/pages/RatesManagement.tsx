@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,6 @@ import { Download, Loader2, Upload, Pencil, Check, X, Plus, Trash2 } from "lucid
 import { toast } from "sonner";
 
 export default function RatesManagement() {
-  const { user, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const { data: rates, isLoading } = trpc.rates.listWithDetails.useQuery();
   const updateMutation = trpc.rates.update.useMutation({
@@ -141,7 +139,7 @@ export default function RatesManagement() {
     event.target.value = '';
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -196,7 +194,7 @@ export default function RatesManagement() {
     return (
       <div className="flex items-center gap-2">
         <span className="text-lg font-semibold">${(rate.rate / 100).toFixed(2)}</span>
-        {user?.role === 'admin' && (
+        {(
           <Button
             size="sm"
             variant="ghost"
@@ -221,7 +219,7 @@ export default function RatesManagement() {
             </p>
           </div>
           <div className="flex gap-2">
-            {user?.role === 'admin' && (
+            {(
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="default">
@@ -302,7 +300,7 @@ export default function RatesManagement() {
                     <CardTitle>{group.cptCode}</CardTitle>
                     <CardDescription>{group.cptDescription}</CardDescription>
                   </div>
-                  {user?.role === 'admin' && (
+                  {(
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
