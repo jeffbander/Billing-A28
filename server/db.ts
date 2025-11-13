@@ -332,20 +332,15 @@ export async function getRatesWithDetails() {
       id: rates.id,
       cptCode: cptCodes.code,
       cptDescription: cptCodes.description,
-      payerName: payers.payerName,
-      payerType: payers.payerType,
-      planName: plans.planName,
+      payerType: rates.payerType,
       siteType: rates.siteType,
       component: rates.component,
       rate: rates.rate,
       verified: rates.verified,
-      medicareBase: rates.medicareBase,
       notes: rates.notes,
     })
     .from(rates)
     .leftJoin(cptCodes, eq(rates.cptCodeId, cptCodes.id))
-    .leftJoin(payers, eq(rates.payerId, payers.id))
-    .leftJoin(plans, eq(rates.planId, plans.id))
     .orderBy(desc(rates.createdAt));
     
   return result;

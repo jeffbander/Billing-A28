@@ -9,8 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import RatesManagement from "./pages/RatesManagement";
 import PayersManagement from "./pages/PayersManagement";
 import ScenarioBuilder from "./pages/ScenarioBuilder";
-import ScenarioResults from "./pages/ScenarioResults";
-import Multipliers from "./pages/Multipliers";
+import ScenarioResults from "./pages/ScenarioResults.tsx";
+
 
 function Router() {
   return (
@@ -19,7 +19,7 @@ function Router() {
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/rates"} component={RatesManagement} />
       <Route path={"/payers"} component={PayersManagement} />
-      <Route path={"/multipliers"} component={Multipliers} />
+
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
       <Route path={"/404"} component={NotFound} />

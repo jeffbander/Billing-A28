@@ -66,3 +66,10 @@
 - [x] Remove Total Patients field from scenario builder
 - [x] Remove Site Type field from scenario builder
 - [x] Update Multipliers page to clearly show insurance types (Medicare, Commercial, Medicaid) for Global/FPA and A28 components
+- [x] Update rates table schema to add payerType column (Medicare, Commercial, Medicaid)
+- [x] Migrate existing rates to new structure with 9 rates per CPT code
+- [x] Remove multipliers table and all multiplier logic from calculations
+- [x] Update calculation logic to use direct rates instead of base rate × multiplier
+- [x] Update Rates Management UI to show 9 rates per CPT code grouped by payer type
+- [x] Remove Multipliers page from navigation
+- [x] Update CSV import/export to handle new rate structure

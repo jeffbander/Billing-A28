@@ -15,6 +15,13 @@
       "when": 1762930142934,
       "tag": "0001_good_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1762992624778,
+      "tag": "0002_wide_annihilus",
+      "breakpoints": true
     }
   ]
 }

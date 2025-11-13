@@ -173,13 +173,11 @@ export const appRouter = router({
     create: adminProcedure
       .input(z.object({
         cptCodeId: z.number(),
-        payerId: z.number().optional(),
-        planId: z.number().optional(),
+        payerType: z.enum(["Medicare", "Commercial", "Medicaid"]),
         siteType: z.enum(["FPA", "Article28"]),
         component: z.enum(["Professional", "Technical", "Global"]),
         rate: z.number(),
         verified: z.boolean().default(false),
-        medicareBase: z.number().optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -190,13 +188,11 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         cptCodeId: z.number().optional(),
-        payerId: z.number().optional(),
-        planId: z.number().optional(),
+        payerType: z.enum(["Medicare", "Commercial", "Medicaid"]).optional(),
         siteType: z.enum(["FPA", "Article28"]).optional(),
         component: z.enum(["Professional", "Technical", "Global"]).optional(),
         rate: z.number().optional(),
         verified: z.boolean().optional(),
-        medicareBase: z.number().optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -216,6 +212,7 @@ export const appRouter = router({
       .input(z.object({
         rates: z.array(z.object({
           cptCode: z.string(),
+          payerType: z.enum(["Medicare", "Commercial", "Medicaid"]),
           siteType: z.enum(["FPA", "Article28"]),
           component: z.enum(["Professional", "Technical", "Global"]),
           rate: z.number(),
@@ -243,7 +240,9 @@ export const appRouter = router({
             // Check if rate already exists
             const existingRates = await db.getRatesByCptCode(cptCodeId);
             const existingRate = existingRates.find(
-              r => r.siteType === rateData.siteType && r.component === rateData.component
+              r => r.siteType === rateData.siteType && 
+                   r.component === rateData.component && 
+                   r.payerType === rateData.payerType
             );
             
             if (existingRate) {
@@ -257,6 +256,7 @@ export const appRouter = router({
               // Create new rate
               await db.createRate({
                 cptCodeId,
+                payerType: rateData.payerType,
                 siteType: rateData.siteType,
                 component: rateData.component,
                 rate: rateData.rate,
@@ -414,14 +414,8 @@ export const appRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
         
-        // Get all rates and multipliers
+        // Get all rates (now includes payerType directly)
         const allRates = await db.getAllRates();
-        const allMultipliers = await db.getAllMultipliers();
-        
-        // Get multipliers by payer type
-        const medicareMultiplier = allMultipliers.find(m => m.payerType === 'Medicare');
-        const commercialMultiplier = allMultipliers.find(m => m.payerType === 'Commercial');
-        const medicaidMultiplier = allMultipliers.find(m => m.payerType === 'Medicaid');
         
         let fpaTotal = 0;
         let article28Total = 0;
@@ -441,50 +435,60 @@ export const appRouter = router({
         for (const detail of scenario.details) {
           if (!detail.cptCodeId) continue;
           
-          // Find applicable rates (these are Medicare base rates)
+          // Find applicable rates by payer type
           const fpaRates = allRates.filter(r => 
-            r.cptCodeId === detail.cptCodeId && r.siteType === 'FPA'
+            r.cptCodeId === detail.cptCodeId && r.siteType === 'FPA' && r.component === 'Global'
           );
-          const article28Rates = allRates.filter(r => 
-            r.cptCodeId === detail.cptCodeId && r.siteType === 'Article28'
+          const article28ProfRates = allRates.filter(r => 
+            r.cptCodeId === detail.cptCodeId && r.siteType === 'Article28' && r.component === 'Professional'
+          );
+          const article28TechRates = allRates.filter(r => 
+            r.cptCodeId === detail.cptCodeId && r.siteType === 'Article28' && r.component === 'Technical'
           );
           
-          // Get base rates
-          const fpaGlobalRate = fpaRates.find(r => r.component === 'Global');
-          const article28ProfRate = article28Rates.find(r => r.component === 'Professional');
-          const article28TechRate = article28Rates.find(r => r.component === 'Technical');
+          // Get rates for each payer type
+          const fpaGlobalMedicare = fpaRates.find(r => r.payerType === 'Medicare');
+          const fpaGlobalCommercial = fpaRates.find(r => r.payerType === 'Commercial');
+          const fpaGlobalMedicaid = fpaRates.find(r => r.payerType === 'Medicaid');
           
-          if (!fpaGlobalRate || !article28ProfRate || !article28TechRate) continue;
+          const article28ProfMedicare = article28ProfRates.find(r => r.payerType === 'Medicare');
+          const article28ProfCommercial = article28ProfRates.find(r => r.payerType === 'Commercial');
+          const article28ProfMedicaid = article28ProfRates.find(r => r.payerType === 'Medicaid');
           
-          // Calculate weighted average based on payer mix
+          const article28TechMedicare = article28TechRates.find(r => r.payerType === 'Medicare');
+          const article28TechCommercial = article28TechRates.find(r => r.payerType === 'Commercial');
+          const article28TechMedicaid = article28TechRates.find(r => r.payerType === 'Medicaid');
+          
+          // Skip if any required rates are missing
+          if (!fpaGlobalMedicare || !fpaGlobalCommercial || !fpaGlobalMedicaid ||
+              !article28ProfMedicare || !article28ProfCommercial || !article28ProfMedicaid ||
+              !article28TechMedicare || !article28TechCommercial || !article28TechMedicaid) {
+            continue;
+          }
+          
+          // Calculate weighted average based on payer mix (no multipliers, direct rates)
           const medicarePercent = scenario.medicarePercent / 100;
           const commercialPercent = scenario.commercialPercent / 100;
           const medicaidPercent = scenario.medicaidPercent / 100;
           
-          // FPA calculation (uses Global rate with multipliers)
-          const fpaGlobalBase = fpaGlobalRate.rate;
-          const fpaMedicare = fpaGlobalBase * medicarePercent * (medicareMultiplier?.globalMultiplier || 100) / 100;
-          const fpaCommercial = fpaGlobalBase * commercialPercent * (commercialMultiplier?.globalMultiplier || 165) / 100;
-          const fpaMedicaid = fpaGlobalBase * medicaidPercent * (medicaidMultiplier?.globalMultiplier || 80) / 100;
-          const fpaWeightedRate = fpaMedicare + fpaCommercial + fpaMedicaid;
-          fpaTotal += fpaWeightedRate * detail.quantity;
+          // FPA calculation (weighted average of direct rates)
+          const fpaWeightedRate = 
+            (fpaGlobalMedicare.rate * medicarePercent) +
+            (fpaGlobalCommercial.rate * commercialPercent) +
+            (fpaGlobalMedicaid.rate * medicaidPercent);
           
-          // Article 28 calculation (uses Professional + Technical with separate multipliers)
-          const article28ProfBase = article28ProfRate.rate;
-          const article28TechBase = article28TechRate.rate;
+          // Article 28 Professional calculation
+          const article28ProfWeightedRate = 
+            (article28ProfMedicare.rate * medicarePercent) +
+            (article28ProfCommercial.rate * commercialPercent) +
+            (article28ProfMedicaid.rate * medicaidPercent);
           
-          // Professional component
-          const profMedicare = article28ProfBase * medicarePercent * (medicareMultiplier?.professionalMultiplier || 100) / 100;
-          const profCommercial = article28ProfBase * commercialPercent * (commercialMultiplier?.professionalMultiplier || 140) / 100;
-          const profMedicaid = article28ProfBase * medicaidPercent * (medicaidMultiplier?.professionalMultiplier || 80) / 100;
+          // Article 28 Technical calculation
+          const article28TechWeightedRate = 
+            (article28TechMedicare.rate * medicarePercent) +
+            (article28TechCommercial.rate * commercialPercent) +
+            (article28TechMedicaid.rate * medicaidPercent);
           
-          // Technical component
-          const techMedicare = article28TechBase * medicarePercent * (medicareMultiplier?.technicalMultiplier || 100) / 100;
-          const techCommercial = article28TechBase * commercialPercent * (commercialMultiplier?.technicalMultiplier || 220) / 100;
-          const techMedicaid = article28TechBase * medicaidPercent * (medicaidMultiplier?.technicalMultiplier || 80) / 100;
-          
-          const article28ProfWeightedRate = profMedicare + profCommercial + profMedicaid;
-          const article28TechWeightedRate = techMedicare + techCommercial + techMedicaid;
           const article28WeightedRate = article28ProfWeightedRate + article28TechWeightedRate;
           
           const fpaRevenue = fpaWeightedRate * detail.quantity;

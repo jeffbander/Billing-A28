@@ -62,18 +62,17 @@ export type InsertPlan = typeof plans.$inferInsert;
 
 /**
  * Rates master table - centralized rate database
- * Stores rates per CPT, payer/plan, site type, and component
+ * Stores rates per CPT, site type, component, and payer type
+ * Each CPT code has 9 rates: 3 payer types × 3 components
  */
 export const rates = mysqlTable("rates", {
   id: int("id").autoincrement().primaryKey(),
   cptCodeId: int("cptCodeId").notNull(),
-  payerId: int("payerId"),
-  planId: int("planId"),
+  payerType: mysqlEnum("payerType", ["Medicare", "Commercial", "Medicaid"]).notNull(),
   siteType: mysqlEnum("siteType", ["FPA", "Article28"]).notNull(),
   component: mysqlEnum("component", ["Professional", "Technical", "Global"]).notNull(),
   rate: int("rate").notNull(), // Store as cents to avoid decimal issues
   verified: boolean("verified").default(false).notNull(),
-  medicareBase: int("medicareBase"), // Medicare reference rate in cents
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -1,0 +1,70 @@
+{
+  "query": "SELECT * FROM rates LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT * FROM rates LIMIT 5",
+  "rows": [
+    {
+      "id": "1",
+      "cptCodeId": "1",
+      "siteType": "FPA",
+      "component": "Global",
+      "rate": "13400",
+      "verified": "0",
+      "notes": "Commercial MCD",
+      "createdAt": "2025-11-12 06:52:17",
+      "updatedAt": "2025-11-12 23:11:17",
+      "payerType": "Medicare"
+    },
+    {
+      "id": "2",
+      "cptCodeId": "1",
+      "siteType": "Article28",
+      "component": "Professional",
+      "rate": "9300",
+      "verified": "0",
+      "notes": "Commercial MCD",
+      "createdAt": "2025-11-12 06:52:17",
+      "updatedAt": "2025-11-12 23:11:17",
+      "payerType": "Medicare"
+    },
+    {
+      "id": "3",
+      "cptCodeId": "1",
+      "siteType": "Article28",
+      "component": "Technical",
+      "rate": "16600",
+      "verified": "0",
+      "notes": "Commercial MCD",
+      "createdAt": "2025-11-12 06:52:17",
+      "updatedAt": "2025-11-12 23:11:17",
+      "payerType": "Medicare"
+    },
+    {
+      "id": "4",
+      "cptCodeId": "3",
+      "siteType": "FPA",
+      "component": "Global",
+      "rate": "48600",
+      "verified": "0",
+      "notes": "Commercial MCD",
+      "createdAt": "2025-11-12 06:52:17",
+      "updatedAt": "2025-11-12 23:11:17",
+      "payerType": "Medicare"
+    },
+    {
+      "id": "5",
+      "cptCodeId": "3",
+      "siteType": "Article28",
+      "component": "Professional",
+      "rate": "12000",
+      "verified": "0",
+      "notes": "Commercial MCD",
+      "createdAt": "2025-11-12 06:52:17",
+      "updatedAt": "2025-11-12 23:11:17",
+      "payerType": "Medicare"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcptCodeId\tsiteType\tcomponent\trate\tverified\tnotes\tcreatedAt\tupdatedAt\tpayerType\n1\t1\tFPA\tGlobal\t13400\t0\tCommercial MCD\t2025-11-12 06:52:17\t2025-11-12 23:11:17\tMedicare\n2\t1\tArticle28\tProfessional\t9300\t0\tCommercial MCD\t2025-11-12 06:52:17\t2025-11-12 23:11:17\tMedicare\n3\t1\tArticle28\tTechnical\t16600\t0\tCommercial MCD\t2025-11-12 06:52:17\t2025-11-12 23:11:17\tMedicare\n4\t3\tFPA\tGlobal\t48600\t0\tCommercial MCD\t2025-11-12 06:52:17\t2025-11-12 23:11:17\tMedicare\n5\t3\tArticle28\tProfessional\t12000\t0\tCommercial MCD\t2025-11-12 06:52:17\t2025-11-12 23:11:17\tMedicare\n",
+  "stderr": "",
+  "execution_time_ms": 785
+}
