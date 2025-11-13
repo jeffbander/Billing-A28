@@ -61,10 +61,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
+    // Bootstrap admin role
+    const ADMIN_EMAIL = 'jeffrey_bander@post.harvard.edu';
+    const isBootstrapAdmin = user.email === ADMIN_EMAIL || user.openId === ENV.ownerOpenId;
+    
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
+    } else if (isBootstrapAdmin) {
       values.role = 'admin';
       updateSet.role = 'admin';
     }
@@ -85,7 +89,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     throw error;
   }
 }
-
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
@@ -94,6 +97,26 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(users).orderBy(users.createdAt);
+}
+
+export async function updateUserRole(userId: number, role: 'admin' | 'user') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

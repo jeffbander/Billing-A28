@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { updateSessionRate, getSessionId, getSessionRate, getAllSessionRates } from "./sessionStorage";
 import { TRPCError } from "@trpc/server";
 
 // Admin-only procedure
@@ -154,8 +155,24 @@ export const appRouter = router({
       return await db.getAllRates();
     }),
     
-    listWithDetails: protectedProcedure.query(async () => {
-      return await db.getRatesWithDetails();
+    listWithDetails: protectedProcedure.query(async ({ ctx }) => {
+      const dbRates = await db.getRatesWithDetails();
+      
+      // For non-admin users, merge with session data
+      if (ctx.user.role !== 'admin') {
+        const sessionId = getSessionId(ctx.user.id, undefined);
+        if (sessionId) {
+          const sessionRates = getAllSessionRates(sessionId);
+          const sessionRateMap = new Map(sessionRates.map(r => [r.id, r]));
+          
+          return dbRates.map(rate => {
+            const sessionRate = sessionRateMap.get(rate.id);
+            return sessionRate || rate;
+          });
+        }
+      }
+      
+      return dbRates;
     }),
     
     getById: protectedProcedure
@@ -184,7 +201,7 @@ export const appRouter = router({
         return await db.createRate(input);
       }),
     
-    update: adminProcedure
+    update: protectedProcedure
       .input(z.object({
         id: z.number(),
         cptCodeId: z.number().optional(),
@@ -195,9 +212,25 @@ export const appRouter = router({
         verified: z.boolean().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const { id, ...data } = input;
-        await db.updateRate(id, data);
+        
+        // Admin edits persist to database
+        if (ctx.user.role === 'admin') {
+          await db.updateRate(id, data);
+        } else {
+          // User edits are session-only
+          const sessionId = getSessionId(ctx.user.id, undefined);
+          if (sessionId) {
+            // Get the current rate with joined fields and merge with updates
+            const allRates = await db.getRatesWithDetails();
+            const currentRate = allRates.find(r => r.id === id);
+            if (currentRate) {
+              const updatedRate = { ...currentRate, ...data };
+              updateSessionRate(sessionId, id, updatedRate);
+            }
+          }
+        }
         return { success: true };
       }),
     
@@ -527,6 +560,23 @@ export const appRouter = router({
           percentDifference: fpaTotal > 0 ? ((article28Total - fpaTotal) / fpaTotal) * 100 : 0,
           cptBreakdown,
         };
+      }),
+  }),
+
+  // Admin Management
+  admin: router({
+    listUsers: protectedProcedure.query(async () => {
+      return await db.getAllUsers();
+    }),
+    
+    setRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(["admin", "user"]),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateUserRole(input.userId, input.role);
+        return { success: true };
       }),
   }),
 });

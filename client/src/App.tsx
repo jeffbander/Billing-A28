@@ -10,6 +10,7 @@ import RatesManagement from "./pages/RatesManagement";
 import PayersManagement from "./pages/PayersManagement";
 import ScenarioBuilder from "./pages/ScenarioBuilder";
 import ScenarioResults from "./pages/ScenarioResults.tsx";
+import AdminPanel from "./pages/AdminPanel";
 
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
 
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
+      <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -87,3 +87,18 @@
 - [x] Update site logo to Mount Sinai Fuster Heart Hospital logo
 - [x] Bypass authentication to allow public access without login
 - [x] Add Mount Sinai logo to mobile header next to sidebar trigger
+
+## Role-Based System Implementation
+- [x] Update user schema to ensure role field supports admin/user/guest
+- [x] Create session storage system for user/guest temporary data
+- [x] Implement admin data persistence to main database
+- [x] Create Admin Management Panel UI for role management
+- [x] Add role management API endpoints (set-role)
+- [x] Update rate editing to distinguish admin vs user/guest edits
+- [x] Implement session data loading on login (load admin dataset)
+- [ ] Add guest mode support without warnings
+- [ ] Create subtle "Guest Mode Active" badge in header
+- [x] Bootstrap admin role for jeffrey_bander@post.harvard.edu
+- [ ] Test admin edits persist globally
+- [ ] Test user/guest edits are session-only
+- [ ] Test role promotion/demotion functionality

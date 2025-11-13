@@ -21,15 +21,18 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Database, Calculator, Shield } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Database, label: "Manage Rates", path: "/rates" },
+  { icon: Users, label: "Manage Payers", path: "/payers" },
+  { icon: Calculator, label: "Scenarios", path: "/scenarios" },
+  { icon: Shield, label: "Admin Panel", path: "/admin", requiresAuth: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -174,24 +177,32 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {menuItems
+                .filter(item => {
+                  // Hide Admin Panel from guests (users without an actual user object)
+                  if (item.requiresAuth && user?.name === 'Guest User') {
+                    return false;
+                  }
+                  return true;
+                })
+                .map(item => {
+                  const isActive = location === item.path;
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => setLocation(item.path)}
+                        tooltip={item.label}
+                        className={`h-10 transition-all font-normal`}
+                      >
+                        <item.icon
+                          className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
             </SidebarMenu>
           </SidebarContent>
 
