@@ -1,9 +1,10 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, guestOrAuthProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import * as guestStorage from "./guestStorage";
 import { TRPCError } from "@trpc/server";
 
 // Admin-only procedure
@@ -331,8 +332,11 @@ export const appRouter = router({
 
   // Scenario Management
   scenarios: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getAllScenarios(ctx.user.id);
+    list: guestOrAuthProcedure.query(async ({ ctx }) => {
+      if (ctx.guestSessionId) {
+        return guestStorage.getGuestScenarios(ctx.guestSessionId);
+      }
+      return await db.getAllScenarios(ctx.user!.id);
     }),
     
     getById: protectedProcedure
@@ -347,7 +351,7 @@ export const appRouter = router({
         return await db.getScenarioWithDetails(input.id);
       }),
     
-    create: protectedProcedure
+    create: guestOrAuthProcedure
       .input(z.object({
         providerName: z.string().max(200),
         totalPatients: z.number(),
@@ -363,10 +367,23 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const { procedures, ...scenarioData } = input;
         
-        // Create scenario
+        // Guest user - store in memory
+        if (ctx.guestSessionId) {
+          const guestScenario = guestStorage.createGuestScenario(ctx.guestSessionId, {
+            ...scenarioData,
+            fpaTotal: null,
+            article28Total: null,
+          });
+          
+          // For guest users, we'll store procedures in a separate structure
+          // For now, just return the scenario ID
+          return { id: guestScenario.id, success: true };
+        }
+        
+        // Authenticated user - store in database
         const result = await db.createScenario({
           ...scenarioData,
-          userId: ctx.user.id,
+          userId: ctx.user!.id,
           fpaTotal: null,
           article28Total: null,
         });
@@ -389,11 +406,21 @@ export const appRouter = router({
         return { id: scenarioId, success: true };
       }),
     
-    delete: protectedProcedure
+    delete: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        // Guest user - delete from memory
+        if (ctx.guestSessionId) {
+          const deleted = guestStorage.deleteGuestScenario(ctx.guestSessionId, input.id);
+          if (!deleted) {
+            throw new TRPCError({ code: 'NOT_FOUND' });
+          }
+          return { success: true };
+        }
+        
+        // Authenticated user - delete from database
         const scenario = await db.getScenarioById(input.id);
-        if (!scenario || scenario.userId !== ctx.user.id) {
+        if (!scenario || scenario.userId !== ctx.user!.id) {
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
         

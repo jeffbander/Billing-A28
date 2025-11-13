@@ -6,7 +6,11 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { getGuestSessionId, setupGuestExitWarning } from "./lib/guestSession";
 import "./index.css";
+
+// Setup guest exit warning
+setupGuestExitWarning();
 
 const queryClient = new QueryClient();
 
@@ -43,9 +47,16 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        const guestSessionId = getGuestSessionId();
+        const headers = {
+          ...(init?.headers || {}),
+          ...(guestSessionId ? { 'x-guest-session-id': guestSessionId } : {}),
+        };
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          headers,
         });
       },
     }),

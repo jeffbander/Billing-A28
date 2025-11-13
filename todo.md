@@ -87,3 +87,9 @@
 - [x] Update site logo to Mount Sinai Fuster Heart Hospital logo
 - [x] Bypass authentication to allow public access without login
 - [x] Add Mount Sinai logo to mobile header next to sidebar trigger
+- [x] Implement guest session management system
+- [x] Update backend to handle guest users with temporary data
+- [x] Create login page with "Continue as Guest" button
+- [x] Add "Guest Mode Active" indicator in UI
+- [x] Add prompt to save progress when guest tries to leave
+- [x] Test guest mode data isolation and session cleanup
