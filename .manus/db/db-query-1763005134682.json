@@ -1,0 +1,40 @@
+{
+  "query": "SELECT siteType, component, payerType, rate/100 as dollars FROM rates r JOIN cpt_codes c ON r.cptCodeId = c.id WHERE c.code = '99213'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT siteType, component, payerType, rate/100 as dollars FROM rates r JOIN cpt_codes c ON r.cptCodeId = c.id WHERE c.code = '99213'",
+  "rows": [
+    {
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicare",
+      "dollars": "1474.0000"
+    },
+    {
+      "siteType": "Article28",
+      "component": "Professional",
+      "payerType": "Medicare",
+      "dollars": "93.0000"
+    },
+    {
+      "siteType": "Article28",
+      "component": "Technical",
+      "payerType": "Medicare",
+      "dollars": "166.0000"
+    },
+    {
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Commercial",
+      "dollars": "1933.0000"
+    },
+    {
+      "siteType": "FPA",
+      "component": "Global",
+      "payerType": "Medicaid",
+      "dollars": "1063.0000"
+    }
+  ],
+  "messages": [],
+  "stdout": "siteType\tcomponent\tpayerType\tdollars\nFPA\tGlobal\tMedicare\t1474.0000\nArticle28\tProfessional\tMedicare\t93.0000\nArticle28\tTechnical\tMedicare\t166.0000\nFPA\tGlobal\tCommercial\t1933.0000\nFPA\tGlobal\tMedicaid\t1063.0000\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

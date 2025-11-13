@@ -1,41 +1,36 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Check, Download, Loader2, Pencil, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { Download, Loader2, Upload, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function RatesManagement() {
   const { user, loading: authLoading } = useAuth();
-  const { data: rates, isLoading, refetch } = trpc.rates.listWithDetails.useQuery();
-  const updateRate = trpc.rates.update.useMutation({
+  const { data: rates, isLoading } = trpc.rates.listWithDetails.useQuery();
+  const updateMutation = trpc.rates.update.useMutation({
     onSuccess: () => {
       toast.success("Rate updated successfully");
-      refetch();
+      setEditingId(null);
     },
     onError: (error) => {
       toast.error(`Failed to update rate: ${error.message}`);
     },
   });
-
   const bulkImportMutation = trpc.rates.bulkImport.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Import complete: ${data.successCount} succeeded, ${data.errorCount} failed`);
-      if (data.errors.length > 0) {
-        console.error("Import errors:", data.errors);
-      }
-      refetch();
+    onSuccess: (result) => {
+      toast.success(`Imported ${result.success} rates successfully. ${result.errors} errors.`);
     },
-    onError: (error: any) => {
-      toast.error(`Import failed: ${error.message}`);
+    onError: (error) => {
+      toast.error(`Failed to import: ${error.message}`);
     },
   });
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
+  const [editValue, setEditValue] = useState("");
 
   const handleEdit = (id: number, currentRate: number) => {
     setEditingId(id);
@@ -44,8 +39,7 @@ export default function RatesManagement() {
 
   const handleSave = async (id: number) => {
     const rateInCents = Math.round(parseFloat(editValue) * 100);
-    await updateRate.mutateAsync({ id, rate: rateInCents });
-    setEditingId(null);
+    await updateMutation.mutateAsync({ id, rate: rateInCents });
   };
 
   const handleCancel = () => {
@@ -55,9 +49,9 @@ export default function RatesManagement() {
 
   const downloadTemplate = () => {
     const template = `cptCode,payerType,siteType,component,rate,verified,notes
-99213,Medicare,FPA,Global,93.00,true,Medicare 2025 rate
+99213,Medicare,FPA,Global,80.00,true,Medicare 2025 rate
 99213,Commercial,FPA,Global,134.00,true,Commercial rate
-99213,Medicaid,FPA,Global,80.00,true,Medicaid rate
+99213,Medicaid,FPA,Global,98.00,true,Medicaid rate
 99213,Medicare,Article28,Professional,71.00,true,Medicare 2025 rate
 99213,Commercial,Article28,Professional,93.00,true,Commercial rate
 99213,Medicaid,Article28,Professional,57.00,true,Medicaid rate
@@ -124,6 +118,49 @@ export default function RatesManagement() {
     return acc;
   }, {} as Record<string, { cptCode: string; cptDescription: string; rates: typeof rates }>);
 
+  const renderRateCell = (rate: any) => {
+    if (!rate) {
+      return <span className="text-sm text-muted-foreground">Not set</span>;
+    }
+
+    if (editingId === rate.id) {
+      return (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            step="0.01"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="h-8 w-24"
+            autoFocus
+          />
+          <Button size="sm" onClick={() => handleSave(rate.id)} className="h-8 w-8 p-0">
+            <Check className="w-4 h-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-lg font-semibold">${(rate.rate / 100).toFixed(2)}</span>
+        {user?.role === 'admin' && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleEdit(rate.id, rate.rate)}
+            className="h-8 w-8 p-0"
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -131,7 +168,7 @@ export default function RatesManagement() {
           <div>
             <h1 className="text-3xl font-bold">Reimbursement Rates</h1>
             <p className="text-muted-foreground mt-1">
-              Manage rates for each CPT code, payer type, and component
+              View and edit reimbursement rates for each CPT code and payer type
             </p>
           </div>
           <div className="flex gap-2">
@@ -153,179 +190,57 @@ export default function RatesManagement() {
           </div>
         </div>
 
-        {groupedRates && Object.values(groupedRates).map((group) => (
-          <Card key={group.cptCode}>
-            <CardHeader>
-              <CardTitle>{group.cptCode}</CardTitle>
-              <CardDescription>{group.cptDescription}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* FPA Global Rates */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 text-blue-600">FPA - Global</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {['Medicare', 'Commercial', 'Medicaid'].map(payerType => {
-                      const rate = group.rates.find(
-                        r => r.siteType === 'FPA' && r.component === 'Global' && r.payerType === payerType
-                      );
-                      return (
-                        <div key={payerType} className="border rounded-lg p-4">
-                          <div className="text-sm font-medium text-muted-foreground mb-2">{payerType}</div>
-                          {rate ? (
-                            <div className="flex items-center gap-2">
-                              {editingId === rate.id ? (
-                                <>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="h-8"
-                                  />
-                                  <Button size="sm" onClick={() => handleSave(rate.id)} className="h-8 w-8 p-0">
-                                    <Check className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="text-lg font-semibold">${(rate.rate / 100).toFixed(2)}</span>
-                                  {user?.role === 'admin' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleEdit(rate.id, rate.rate)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+        {groupedRates && Object.values(groupedRates).map((group) => {
+          // Organize rates by payer type and component
+          const getRateFor = (siteType: string, component: string, payerType: string) => {
+            return group.rates.find(
+              r => r.siteType === siteType && r.component === component && r.payerType === payerType
+            );
+          };
 
-                {/* Article 28 Professional Rates */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 text-purple-600">Article 28 - Professional (26)</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {['Medicare', 'Commercial', 'Medicaid'].map(payerType => {
-                      const rate = group.rates.find(
-                        r => r.siteType === 'Article28' && r.component === 'Professional' && r.payerType === payerType
-                      );
-                      return (
-                        <div key={payerType} className="border rounded-lg p-4">
-                          <div className="text-sm font-medium text-muted-foreground mb-2">{payerType}</div>
-                          {rate ? (
-                            <div className="flex items-center gap-2">
-                              {editingId === rate.id ? (
-                                <>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="h-8"
-                                  />
-                                  <Button size="sm" onClick={() => handleSave(rate.id)} className="h-8 w-8 p-0">
-                                    <Check className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="text-lg font-semibold">${(rate.rate / 100).toFixed(2)}</span>
-                                  {user?.role === 'admin' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleEdit(rate.id, rate.rate)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+          return (
+            <Card key={group.cptCode}>
+              <CardHeader>
+                <CardTitle>{group.cptCode}</CardTitle>
+                <CardDescription>{group.cptDescription}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-semibold">Site Type / Component</th>
+                        <th className="text-center p-3 font-semibold">Medicare</th>
+                        <th className="text-center p-3 font-semibold bg-blue-50">Commercial</th>
+                        <th className="text-center p-3 font-semibold bg-green-50">Medicaid</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium text-blue-600">FPA - Global</td>
+                        <td className="p-3 text-center">{renderRateCell(getRateFor('FPA', 'Global', 'Medicare'))}</td>
+                        <td className="p-3 text-center bg-blue-50">{renderRateCell(getRateFor('FPA', 'Global', 'Commercial'))}</td>
+                        <td className="p-3 text-center bg-green-50">{renderRateCell(getRateFor('FPA', 'Global', 'Medicaid'))}</td>
+                      </tr>
+                      <tr className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium text-purple-600">Article 28 - Professional (26)</td>
+                        <td className="p-3 text-center">{renderRateCell(getRateFor('Article28', 'Professional', 'Medicare'))}</td>
+                        <td className="p-3 text-center bg-blue-50">{renderRateCell(getRateFor('Article28', 'Professional', 'Commercial'))}</td>
+                        <td className="p-3 text-center bg-green-50">{renderRateCell(getRateFor('Article28', 'Professional', 'Medicaid'))}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="p-3 font-medium text-purple-600">Article 28 - Technical (TC)</td>
+                        <td className="p-3 text-center">{renderRateCell(getRateFor('Article28', 'Technical', 'Medicare'))}</td>
+                        <td className="p-3 text-center bg-blue-50">{renderRateCell(getRateFor('Article28', 'Technical', 'Commercial'))}</td>
+                        <td className="p-3 text-center bg-green-50">{renderRateCell(getRateFor('Article28', 'Technical', 'Medicaid'))}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-
-                {/* Article 28 Technical Rates */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 text-purple-600">Article 28 - Technical (TC)</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {['Medicare', 'Commercial', 'Medicaid'].map(payerType => {
-                      const rate = group.rates.find(
-                        r => r.siteType === 'Article28' && r.component === 'Technical' && r.payerType === payerType
-                      );
-                      return (
-                        <div key={payerType} className="border rounded-lg p-4">
-                          <div className="text-sm font-medium text-muted-foreground mb-2">{payerType}</div>
-                          {rate ? (
-                            <div className="flex items-center gap-2">
-                              {editingId === rate.id ? (
-                                <>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="h-8"
-                                  />
-                                  <Button size="sm" onClick={() => handleSave(rate.id)} className="h-8 w-8 p-0">
-                                    <Check className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="text-lg font-semibold">${(rate.rate / 100).toFixed(2)}</span>
-                                  {user?.role === 'admin' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleEdit(rate.id, rate.rate)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </DashboardLayout>
   );

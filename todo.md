@@ -76,3 +76,5 @@
 - [x] Verify Commercial and Medicaid rates are editable in Rates Management page
 - [x] Fix issue: Commercial and Medicaid rates not editable in UI
 - [x] Fix missing pencil icons for Commercial and Medicaid rates
+- [ ] Debug why Commercial and Medicaid rates still not showing pencil icons in Manage Rates
+- [x] Create simple, clear interface for editing Commercial and Medicaid rates
