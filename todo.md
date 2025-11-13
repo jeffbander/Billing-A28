@@ -80,3 +80,6 @@
 - [x] Create simple, clear interface for editing Commercial and Medicaid rates
 - [x] Replace "Not set" rates with $0.00 display
 - [x] Create placeholder rate records ($0.00) for all missing rates to make them editable
+- [x] Fix rate save functionality for Commercial and Medicaid rates
+- [x] Add ability to add new CPT codes in Manage Rates
+- [x] Add ability to delete CPT codes in Manage Rates

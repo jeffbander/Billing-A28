@@ -114,8 +114,58 @@ export async function getCptCodeById(id: number) {
 export async function createCptCode(data: InsertCptCode) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(cptCodes).values(data);
-  return result;
+  await db.insert(cptCodes).values(data);
+  
+  // Query for the newly created CPT code to get its ID
+  const newCptCode = await db.select().from(cptCodes).where(eq(cptCodes.code, data.code)).limit(1);
+  if (newCptCode.length === 0) throw new Error("Failed to retrieve newly created CPT code");
+  const insertId = newCptCode[0].id;
+  
+  // Create 9 placeholder rates (3 payer types × 3 components)
+  const payerTypes: Array<"Medicare" | "Commercial" | "Medicaid"> = ["Medicare", "Commercial", "Medicaid"];
+  const siteTypes: Array<"FPA" | "Article28"> = ["FPA", "Article28"];
+  const components: Array<"Professional" | "Technical" | "Global"> = ["Professional", "Technical", "Global"];
+  
+  const placeholderRates: InsertRate[] = [];
+  
+  for (const payerType of payerTypes) {
+    // FPA Global
+    placeholderRates.push({
+      cptCodeId: insertId,
+      payerType,
+      siteType: "FPA",
+      component: "Global",
+      rate: 0,
+      verified: false,
+      notes: "Placeholder rate - needs to be updated",
+    });
+    
+    // Article 28 Professional
+    placeholderRates.push({
+      cptCodeId: insertId,
+      payerType,
+      siteType: "Article28",
+      component: "Professional",
+      rate: 0,
+      verified: false,
+      notes: "Placeholder rate - needs to be updated",
+    });
+    
+    // Article 28 Technical
+    placeholderRates.push({
+      cptCodeId: insertId,
+      payerType,
+      siteType: "Article28",
+      component: "Technical",
+      rate: 0,
+      verified: false,
+      notes: "Placeholder rate - needs to be updated",
+    });
+  }
+  
+  await db.insert(rates).values(placeholderRates);
+  
+  return { success: true, id: insertId };
 }
 
 export async function updateCptCode(id: number, data: Partial<InsertCptCode>) {
@@ -330,6 +380,7 @@ export async function getRatesWithDetails() {
   const result = await db
     .select({
       id: rates.id,
+      cptCodeId: rates.cptCodeId,
       cptCode: cptCodes.code,
       cptDescription: cptCodes.description,
       payerType: rates.payerType,

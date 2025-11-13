@@ -4,17 +4,22 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Download, Loader2, Upload, Pencil, Check, X } from "lucide-react";
+import { Download, Loader2, Upload, Pencil, Check, X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function RatesManagement() {
   const { user, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
   const { data: rates, isLoading } = trpc.rates.listWithDetails.useQuery();
   const updateMutation = trpc.rates.update.useMutation({
     onSuccess: () => {
       toast.success("Rate updated successfully");
       setEditingId(null);
+      utils.rates.listWithDetails.invalidate();
     },
     onError: (error) => {
       toast.error(`Failed to update rate: ${error.message}`);
@@ -23,6 +28,7 @@ export default function RatesManagement() {
   const bulkImportMutation = trpc.rates.bulkImport.useMutation({
     onSuccess: (result) => {
       toast.success(`Imported ${result.success} rates successfully. ${result.errors} errors.`);
+      utils.rates.listWithDetails.invalidate();
     },
     onError: (error) => {
       toast.error(`Failed to import: ${error.message}`);
@@ -31,6 +37,32 @@ export default function RatesManagement() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [newCptCode, setNewCptCode] = useState("");
+  const [newCptDescription, setNewCptDescription] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const createCptMutation = trpc.cptCodes.create.useMutation({
+    onSuccess: () => {
+      toast.success("CPT code added successfully");
+      setNewCptCode("");
+      setNewCptDescription("");
+      setIsAddDialogOpen(false);
+      utils.rates.listWithDetails.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to add CPT code: ${error.message}`);
+    },
+  });
+
+  const deleteCptMutation = trpc.cptCodes.delete.useMutation({
+    onSuccess: () => {
+      toast.success("CPT code deleted successfully");
+      utils.rates.listWithDetails.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete CPT code: ${error.message}`);
+    },
+  });
 
   const handleEdit = (id: number, currentRate: number) => {
     setEditingId(id);
@@ -45,6 +77,21 @@ export default function RatesManagement() {
   const handleCancel = () => {
     setEditingId(null);
     setEditValue("");
+  };
+
+  const handleAddCptCode = async () => {
+    if (!newCptCode.trim() || !newCptDescription.trim()) {
+      toast.error("Please enter both CPT code and description");
+      return;
+    }
+    await createCptMutation.mutateAsync({
+      code: newCptCode.trim(),
+      description: newCptDescription.trim(),
+    });
+  };
+
+  const handleDeleteCptCode = async (cptCodeId: number) => {
+    await deleteCptMutation.mutateAsync({ id: cptCodeId });
   };
 
   const downloadTemplate = () => {
@@ -109,6 +156,7 @@ export default function RatesManagement() {
     const key = `${rate.cptCode}`;
     if (!acc[key]) {
       acc[key] = {
+        cptCodeId: rate.cptCodeId,
         cptCode: rate.cptCode || '',
         cptDescription: rate.cptDescription || '',
         rates: [],
@@ -116,7 +164,7 @@ export default function RatesManagement() {
     }
     acc[key].rates.push(rate);
     return acc;
-  }, {} as Record<string, { cptCode: string; cptDescription: string; rates: typeof rates }>);
+  }, {} as Record<string, { cptCodeId: number; cptCode: string; cptDescription: string; rates: typeof rates }>);
 
   const renderRateCell = (rate: any) => {
     if (!rate) {
@@ -173,6 +221,53 @@ export default function RatesManagement() {
             </p>
           </div>
           <div className="flex gap-2">
+            {user?.role === 'admin' && (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add CPT Code
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New CPT Code</DialogTitle>
+                    <DialogDescription>
+                      Enter the CPT code and description. Placeholder rates will be created automatically.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cpt-code">CPT Code</Label>
+                      <Input
+                        id="cpt-code"
+                        placeholder="e.g., 99214"
+                        value={newCptCode}
+                        onChange={(e) => setNewCptCode(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        placeholder="e.g., Office visit, established patient"
+                        value={newCptDescription}
+                        onChange={(e) => setNewCptDescription(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddCptCode} disabled={createCptMutation.isPending}>
+                      {createCptMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Add CPT Code
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
             <Button onClick={downloadTemplate} variant="outline">
               <Download className="w-4 h-4 mr-2" />
               Download Template
@@ -202,8 +297,39 @@ export default function RatesManagement() {
           return (
             <Card key={group.cptCode}>
               <CardHeader>
-                <CardTitle>{group.cptCode}</CardTitle>
-                <CardDescription>{group.cptDescription}</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{group.cptCode}</CardTitle>
+                    <CardDescription>{group.cptDescription}</CardDescription>
+                  </div>
+                  {user?.role === 'admin' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete CPT Code</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete CPT code {group.cptCode}? This will also delete all associated rates. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteCptCode(group.cptCodeId)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {deleteCptMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">

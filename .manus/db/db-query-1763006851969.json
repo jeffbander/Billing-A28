@@ -1,0 +1,9 @@
+{
+  "query": "SELECT r.*, c.code FROM rates r JOIN cpt_codes c ON r.cptCodeId = c.id WHERE c.code = '99215'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT r.*, c.code FROM rates r JOIN cpt_codes c ON r.cptCodeId = c.id WHERE c.code = '99215'",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 96
+}
