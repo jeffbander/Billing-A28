@@ -1,10 +1,13 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, guestOrAuthProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { updateSessionRate, getSessionId, getSessionRate, getAllSessionRates } from "./sessionStorage";
+import { 
+  updateSessionRate, getSessionId, getSessionRate, getAllSessionRates,
+  createSessionScenario, getAllSessionScenarios, getSessionScenario, deleteSessionScenario
+} from "./sessionStorage";
 import { TRPCError } from "@trpc/server";
 
 // Admin-only procedure
@@ -28,11 +31,11 @@ export const appRouter = router({
 
   // CPT Code Management
   cptCodes: router({
-    list: protectedProcedure.query(async () => {
+    list: guestOrAuthProcedure.query(async () => {
       return await db.getAllCptCodes();
     }),
     
-    getById: protectedProcedure
+    getById: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getCptCodeById(input.id);
@@ -69,11 +72,11 @@ export const appRouter = router({
 
   // Payer Management
   payers: router({
-    list: protectedProcedure.query(async () => {
+    list: guestOrAuthProcedure.query(async () => {
       return await db.getAllPayers();
     }),
     
-    getById: protectedProcedure
+    getById: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getPayerById(input.id);
@@ -151,15 +154,26 @@ export const appRouter = router({
 
   // Rate Management
   rates: router({
-    list: protectedProcedure.query(async () => {
+    list: guestOrAuthProcedure.query(async () => {
       return await db.getAllRates();
     }),
     
-    listWithDetails: protectedProcedure.query(async ({ ctx }) => {
+    listWithDetails: guestOrAuthProcedure.query(async ({ ctx }) => {
       const dbRates = await db.getRatesWithDetails();
       
-      // For non-admin users, merge with session data
-      if (ctx.user.role !== 'admin') {
+      // For guests, use guest session ID
+      if (ctx.isGuest && ctx.guestSessionId) {
+        const sessionRates = getAllSessionRates(ctx.guestSessionId);
+        const sessionRateMap = new Map(sessionRates.map(r => [r.id, r]));
+        
+        return dbRates.map(rate => {
+          const sessionRate = sessionRateMap.get(rate.id);
+          return sessionRate || rate;
+        });
+      }
+      
+      // For non-admin authenticated users, merge with session data
+      if (ctx.user && ctx.user.role !== 'admin') {
         const sessionId = getSessionId(ctx.user.id, undefined);
         if (sessionId) {
           const sessionRates = getAllSessionRates(sessionId);
@@ -201,7 +215,7 @@ export const appRouter = router({
         return await db.createRate(input);
       }),
     
-    update: protectedProcedure
+    update: guestOrAuthProcedure
       .input(z.object({
         id: z.number(),
         cptCodeId: z.number().optional(),
@@ -216,11 +230,14 @@ export const appRouter = router({
         const { id, ...data } = input;
         
         // Admin edits persist to database
-        if (ctx.user.role === 'admin') {
+        if (ctx.user && ctx.user.role === 'admin') {
           await db.updateRate(id, data);
         } else {
-          // User edits are session-only
-          const sessionId = getSessionId(ctx.user.id, undefined);
+          // Guest and user edits are session-only
+          const sessionId = ctx.isGuest && ctx.guestSessionId 
+            ? ctx.guestSessionId 
+            : ctx.user ? getSessionId(ctx.user.id, undefined) : null;
+            
           if (sessionId) {
             // Get the current rate with joined fields and merge with updates
             const allRates = await db.getRatesWithDetails();
@@ -364,23 +381,62 @@ export const appRouter = router({
 
   // Scenario Management
   scenarios: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getAllScenarios(ctx.user.id);
+    list: guestOrAuthProcedure.query(async ({ ctx }) => {
+      // Guests get scenarios from session storage
+      if (ctx.isGuest && ctx.guestSessionId) {
+        return getAllSessionScenarios(ctx.guestSessionId);
+      }
+      // Authenticated users get from database
+      if (ctx.user) {
+        const dbScenarios = await db.getAllScenarios(ctx.user.id);
+        // For non-admin users, merge with session scenarios
+        if (ctx.user.role !== 'admin') {
+          const sessionId = getSessionId(ctx.user.id, undefined);
+          if (sessionId) {
+            const sessionScenarios = getAllSessionScenarios(sessionId);
+            return [...dbScenarios, ...sessionScenarios];
+          }
+        }
+        return dbScenarios;
+      }
+      return [];
     }),
     
-    getById: protectedProcedure
+    getById: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        // Check session storage first
+        const sessionId = ctx.isGuest && ctx.guestSessionId 
+          ? ctx.guestSessionId 
+          : ctx.user ? getSessionId(ctx.user.id, undefined) : null;
+        
+        if (sessionId) {
+          const sessionScenario = getSessionScenario(sessionId, input.id);
+          if (sessionScenario) return sessionScenario;
+        }
+        
+        // Fall back to database
         return await db.getScenarioById(input.id);
       }),
     
-    getWithDetails: protectedProcedure
+    getWithDetails: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        // Check session storage first
+        const sessionId = ctx.isGuest && ctx.guestSessionId 
+          ? ctx.guestSessionId 
+          : ctx.user ? getSessionId(ctx.user.id, undefined) : null;
+        
+        if (sessionId) {
+          const sessionScenario = getSessionScenario(sessionId, input.id);
+          if (sessionScenario) return sessionScenario;
+        }
+        
+        // Fall back to database
         return await db.getScenarioWithDetails(input.id);
       }),
     
-    create: protectedProcedure
+    create: guestOrAuthProcedure
       .input(z.object({
         providerName: z.string().max(200),
         totalPatients: z.number(),
@@ -396,59 +452,140 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const { procedures, ...scenarioData } = input;
         
-        // Create scenario
-        const result = await db.createScenario({
-          ...scenarioData,
-          userId: ctx.user.id,
-          fpaTotal: null,
-          article28Total: null,
-        });
-        
-        const scenarioId = result.insertId;
-        
-        if (!scenarioId) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create scenario' });
-        }
-        
-        // Create scenario details
-        for (const proc of procedures) {
-          await db.createScenarioDetail({
-            scenarioId,
-            cptCodeId: proc.cptCodeId,
-            quantity: proc.quantity,
+        // Guests store in session
+        if (ctx.isGuest && ctx.guestSessionId) {
+          const scenarioId = createSessionScenario(ctx.guestSessionId, {
+            ...scenarioData,
+            procedures,
+            fpaTotal: null,
+            article28Total: null,
           });
+          return { id: scenarioId, success: true };
         }
         
-        return { id: scenarioId, success: true };
+        // Authenticated users store in database
+        if (ctx.user) {
+          // Non-admin users store in session
+          if (ctx.user.role !== 'admin') {
+            const sessionId = getSessionId(ctx.user.id, undefined);
+            if (sessionId) {
+              const scenarioId = createSessionScenario(sessionId, {
+                ...scenarioData,
+                procedures,
+                fpaTotal: null,
+                article28Total: null,
+              });
+              return { id: scenarioId, success: true };
+            }
+          }
+          
+          // Admin users store in database
+          const result = await db.createScenario({
+            ...scenarioData,
+            userId: ctx.user.id,
+            fpaTotal: null,
+            article28Total: null,
+          });
+          
+          const scenarioId = result.insertId;
+          
+          if (!scenarioId) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create scenario' });
+          }
+          
+          // Create scenario details
+          for (const proc of procedures) {
+            await db.createScenarioDetail({
+              scenarioId,
+              cptCodeId: proc.cptCodeId,
+              quantity: proc.quantity,
+            });
+          }
+          
+          return { id: scenarioId, success: true };
+        }
+        
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
       }),
     
-    delete: protectedProcedure
+    delete: guestOrAuthProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        const scenario = await db.getScenarioById(input.id);
-        if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: 'FORBIDDEN' });
+        // Check session storage first
+        const sessionId = ctx.isGuest && ctx.guestSessionId 
+          ? ctx.guestSessionId 
+          : ctx.user ? getSessionId(ctx.user.id, undefined) : null;
+        
+        if (sessionId) {
+          const sessionScenario = getSessionScenario(sessionId, input.id);
+          if (sessionScenario) {
+            deleteSessionScenario(sessionId, input.id);
+            return { success: true };
+          }
         }
         
-        await db.deleteScenarioDetails(input.id);
-        await db.deleteScenario(input.id);
-        return { success: true };
+        // Fall back to database (admin only)
+        if (ctx.user) {
+          const scenario = await db.getScenarioById(input.id);
+          if (!scenario || scenario.userId !== ctx.user.id) {
+            throw new TRPCError({ code: 'FORBIDDEN' });
+          }
+          
+          await db.deleteScenarioDetails(input.id);
+          await db.deleteScenario(input.id);
+          return { success: true };
+        }
+        
+        throw new TRPCError({ code: 'NOT_FOUND' });
       }),
     
     // Calculate reimbursement for a scenario
-    calculate: protectedProcedure
+    calculate: guestOrAuthProcedure
       .input(z.object({
         scenarioId: z.number(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const scenario = await db.getScenarioWithDetails(input.scenarioId);
+        // Get scenario from session or database
+        const sessionId = ctx.isGuest && ctx.guestSessionId 
+          ? ctx.guestSessionId 
+          : ctx.user ? getSessionId(ctx.user.id, undefined) : null;
         
-        if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: 'FORBIDDEN' });
+        let scenario;
+        if (sessionId) {
+          scenario = getSessionScenario(sessionId, input.scenarioId);
         }
         
-        // Get all rates (now includes payerType directly)
-        const allRates = await db.getAllRates();
+        if (!scenario && ctx.user) {
+          scenario = await db.getScenarioWithDetails(input.scenarioId);
+          if (!scenario || scenario.userId !== ctx.user.id) {
+            throw new TRPCError({ code: 'FORBIDDEN' });
+          }
+        }
+        
+        if (!scenario) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
+        
+        // Get all rates from database
+        const dbRates = await db.getAllRates();
+        
+        // For guests and non-admin users, merge with session rates
+        let allRates: any[] = dbRates;
+        if (sessionId) {
+          const sessionRates = getAllSessionRates(sessionId);
+          const sessionRateMap = new Map(sessionRates.map(r => [r.id, r]));
+          allRates = dbRates.map(rate => sessionRateMap.get(rate.id) || rate);
+        }
+        
+        // Convert procedures to details format for session scenarios
+        const sessionScenario = scenario as any;
+        const details = sessionScenario.details || sessionScenario.procedures?.map((p: any) => ({
+          id: 0,
+          cptCodeId: p.cptCodeId,
+          cptCode: null,
+          cptDescription: null,
+          quantity: p.quantity
+        })) || [];
         
         let fpaTotal = 0;
         let article28Total = 0;
@@ -465,7 +602,7 @@ export const appRouter = router({
         }> = [];
         
         // Calculate for each procedure
-        for (const detail of scenario.details) {
+        for (const detail of details) {
           if (!detail.cptCodeId) continue;
           
           // Find applicable rates by payer type

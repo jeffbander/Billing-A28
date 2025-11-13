@@ -27,6 +27,19 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
+// Middleware that allows both authenticated users and guests
+const requireUserOrGuest = t.middleware(async opts => {
+  const { ctx, next } = opts;
+
+  if (!ctx.user && !ctx.isGuest) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+  }
+
+  return next({ ctx });
+});
+
+export const guestOrAuthProcedure = t.procedure.use(requireUserOrGuest);
+
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;

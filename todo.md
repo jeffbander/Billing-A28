@@ -106,6 +106,10 @@
 - [ ] Test user/guest edits are session-only
 - [ ] Test role promotion/demotion functionality
 - [x] Update Scenario Builder to pull CPT codes from Reimbursement Rates instead of CPT codes table
-- [ ] Fix guest mode button on home page to properly start guest session
-- [ ] Add guest mode option to OAuth sign-in page
-- [ ] Test guest mode works from both entry points
+- [x] Fix guest mode button on home page to properly start guest session
+- [x] Add guest mode option to OAuth sign-in page
+- [x] Test guest mode works from both entry points
+- [x] Fix rates query to show database rates to guest users
+- [x] Enable rate editing for guests (session-only storage)
+- [x] Fix CPT codes visibility in Scenario Builder for guests
+- [x] Test full guest workflow (view rates, edit rates, create scenarios)
