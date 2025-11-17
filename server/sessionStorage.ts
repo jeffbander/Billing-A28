@@ -28,6 +28,7 @@ export type SessionScenario = {
   commercialPercent: number;
   medicaidPercent: number;
   siteType: "FPA" | "Article28" | null;
+  rateMode: "manual" | "calculated";
   fpaTotal: number | null;
   article28Total: number | null;
   createdAt: Date;

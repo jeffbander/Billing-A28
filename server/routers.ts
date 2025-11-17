@@ -444,6 +444,7 @@ export const appRouter = router({
         commercialPercent: z.number().min(0).max(100),
         medicaidPercent: z.number().min(0).max(100),
         siteType: z.enum(["FPA", "Article28"]),
+        rateMode: z.enum(["manual", "calculated"]).default("manual"),
         procedures: z.array(z.object({
           cptCodeId: z.number(),
           quantity: z.number(),
@@ -566,6 +567,11 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
         
+        // Get calculation settings for calculated rate mode
+        const calcSettings = await db.getCalculationSettings();
+        const commercialMultiplier = calcSettings ? calcSettings.commercialTechnicalMultiplier / 100 : 1.5;
+        const medicaidMultiplier = calcSettings ? calcSettings.medicaidTechnicalMultiplier / 100 : 0.8;
+        
         // Get all rates from database
         const dbRates = await db.getAllRates();
         
@@ -654,10 +660,24 @@ export const appRouter = router({
             (article28ProfMedicaid.rate * medicaidPercent);
           
           // Article 28 Technical calculation
-          const article28TechWeightedRate = 
-            (article28TechMedicare.rate * medicarePercent) +
-            (article28TechCommercial.rate * commercialPercent) +
-            (article28TechMedicaid.rate * medicaidPercent);
+          let article28TechWeightedRate;
+          if (scenario.rateMode === 'calculated') {
+            // Calculated mode: apply multipliers to Medicare Technical rate
+            const medicareTechRate = article28TechMedicare.rate;
+            const commercialTechRate = medicareTechRate * commercialMultiplier;
+            const medicaidTechRate = medicareTechRate * medicaidMultiplier;
+            
+            article28TechWeightedRate = 
+              (medicareTechRate * medicarePercent) +
+              (commercialTechRate * commercialPercent) +
+              (medicaidTechRate * medicaidPercent);
+          } else {
+            // Manual mode: use entered rates
+            article28TechWeightedRate = 
+              (article28TechMedicare.rate * medicarePercent) +
+              (article28TechCommercial.rate * commercialPercent) +
+              (article28TechMedicaid.rate * medicaidPercent);
+          }
           
           const article28WeightedRate = article28ProfWeightedRate + article28TechWeightedRate;
           
@@ -713,6 +733,27 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await db.updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+    
+    // Calculation Settings
+    getCalculationSettings: adminProcedure.query(async () => {
+      const settings = await db.getCalculationSettings();
+      if (!settings) {
+        // Initialize with defaults if not exists
+        await db.initializeCalculationSettings();
+        return await db.getCalculationSettings();
+      }
+      return settings;
+    }),
+    
+    updateCalculationSettings: adminProcedure
+      .input(z.object({
+        commercialTechnicalMultiplier: z.number().min(50).max(300), // 0.5x to 3.0x
+        medicaidTechnicalMultiplier: z.number().min(50).max(300),
+      }))
+      .mutation(async ({ input }) => {
+        await db.upsertCalculationSettings(input);
         return { success: true };
       }),
   }),

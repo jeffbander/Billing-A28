@@ -8,7 +8,8 @@ import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Calculator } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export default function ScenarioBuilder() {
   const [, setLocation] = useLocation();
@@ -36,6 +37,7 @@ export default function ScenarioBuilder() {
   const [medicarePercent, setMedicarePercent] = useState("40");
   const [commercialPercent, setCommercialPercent] = useState("40");
   const [medicaidPercent, setMedicaidPercent] = useState("20");
+  const [rateMode, setRateMode] = useState<"manual" | "calculated">("manual");
   const [procedures, setProcedures] = useState<Array<{ cptCodeId: number; quantity: number }>>([]);
 
   const createScenario = trpc.scenarios.create.useMutation({
@@ -89,6 +91,7 @@ export default function ScenarioBuilder() {
       commercialPercent: commercial,
       medicaidPercent: medicaid,
       siteType: "FPA", // Default value
+      rateMode,
       procedures,
     });
   };
@@ -183,6 +186,52 @@ export default function ScenarioBuilder() {
               <div className={`text-sm ${payerMixTotal === 100 ? "text-green-600" : "text-red-600"}`}>
                 Total: {payerMixTotal}% {payerMixTotal !== 100 && "(must equal 100%)"}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Rate Mode */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                <CardTitle>Rate Calculation Mode</CardTitle>
+              </div>
+              <CardDescription>
+                Choose how reimbursement rates are determined for this scenario
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    {rateMode === "manual" ? "Use Entered Rates" : "Use Calculated Rates"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {rateMode === "manual" 
+                      ? "Use manually entered rates from the rates table"
+                      : "Calculate Commercial/Medicaid Technical rates from Medicare using multipliers"}
+                  </div>
+                </div>
+                <Switch
+                  checked={rateMode === "calculated"}
+                  onCheckedChange={(checked) => setRateMode(checked ? "calculated" : "manual")}
+                />
+              </div>
+              
+              {rateMode === "calculated" && (
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <p className="text-sm font-medium">Calculated Rate Formula:</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li>• <strong>Professional & Global:</strong> Use entered rates (all payers)</li>
+                    <li>• <strong>Medicare Technical:</strong> Use entered rate (source of truth)</li>
+                    <li>• <strong>Commercial Technical:</strong> Medicare Technical × Commercial Multiplier</li>
+                    <li>• <strong>Medicaid Technical:</strong> Medicare Technical × Medicaid Multiplier</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Multipliers are configured in the Admin Panel
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

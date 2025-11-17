@@ -113,3 +113,15 @@
 - [x] Enable rate editing for guests (session-only storage)
 - [x] Fix CPT codes visibility in Scenario Builder for guests
 - [x] Test full guest workflow (view rates, edit rates, create scenarios)
+
+## Calculated Rates Feature
+- [x] Create calculation_settings table for storing multipliers
+- [x] Add backend API for getting/updating calculation settings
+- [x] Add Calculation Settings section to Admin Panel UI
+- [x] Add Commercial Technical multiplier input (0.5x - 3.0x)
+- [x] Add Medicaid Technical multiplier input (0.5x - 3.0x)
+- [x] Add "Rate Mode" toggle to Scenario Builder (Manual vs Calculated)
+- [x] Update scenario schema to store rateMode field
+- [x] Update calculation logic to apply multipliers when rateMode is "calculated"
+- [x] Test calculated rates with various multiplier values
+- [x] Verify manual rates still work unchanged

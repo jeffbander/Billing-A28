@@ -8,7 +8,8 @@ import {
   rates, InsertRate, Rate,
   payerMultipliers, InsertPayerMultiplier, PayerMultiplier,
   scenarios, InsertScenario, Scenario,
-  scenarioDetails, InsertScenarioDetail, ScenarioDetail
+  scenarioDetails, InsertScenarioDetail, ScenarioDetail,
+  calculationSettings, InsertCalculationSettings, CalculationSettings
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -443,4 +444,43 @@ export async function getScenarioWithDetails(scenarioId: number) {
     ...scenario,
     details,
   };
+}
+
+// ===== Calculation Settings Management =====
+export async function getCalculationSettings(): Promise<CalculationSettings | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(calculationSettings).limit(1);
+  return result[0];
+}
+
+export async function upsertCalculationSettings(data: {
+  commercialTechnicalMultiplier: number;
+  medicaidTechnicalMultiplier: number;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Check if settings exist
+  const existing = await getCalculationSettings();
+  
+  if (existing) {
+    // Update existing settings
+    await db.update(calculationSettings)
+      .set(data)
+      .where(eq(calculationSettings.id, existing.id));
+  } else {
+    // Insert new settings
+    await db.insert(calculationSettings).values(data);
+  }
+}
+
+export async function initializeCalculationSettings(): Promise<void> {
+  const existing = await getCalculationSettings();
+  if (!existing) {
+    await upsertCalculationSettings({
+      commercialTechnicalMultiplier: 150, // 1.5x default
+      medicaidTechnicalMultiplier: 80,    // 0.8x default
+    });
+  }
 }

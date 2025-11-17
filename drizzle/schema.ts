@@ -111,6 +111,7 @@ export const scenarios = mysqlTable("scenarios", {
   commercialPercent: int("commercialPercent").notNull(),
   medicaidPercent: int("medicaidPercent").notNull(),
   siteType: mysqlEnum("siteType", ["FPA", "Article28"]).notNull(),
+  rateMode: mysqlEnum("rateMode", ["manual", "calculated"]).notNull().default("manual"), // Rate calculation mode
   fpaTotal: int("fpaTotal"), // Calculated total in cents
   article28Total: int("article28Total"), // Calculated total in cents
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -133,3 +134,17 @@ export const scenarioDetails = mysqlTable("scenario_details", {
 
 export type ScenarioDetail = typeof scenarioDetails.$inferSelect;
 export type InsertScenarioDetail = typeof scenarioDetails.$inferInsert;
+
+/**
+ * Calculation settings table - stores global multipliers for calculated rate mode
+ * Single row configuration table
+ */
+export const calculationSettings = mysqlTable("calculation_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  commercialTechnicalMultiplier: int("commercialTechnicalMultiplier").notNull().default(150), // Store as basis points (150 = 1.50x)
+  medicaidTechnicalMultiplier: int("medicaidTechnicalMultiplier").notNull().default(80), // Store as basis points (80 = 0.80x)
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CalculationSettings = typeof calculationSettings.$inferSelect;
+export type InsertCalculationSettings = typeof calculationSettings.$inferInsert;
