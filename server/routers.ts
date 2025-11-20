@@ -45,9 +45,15 @@ export const appRouter = router({
       .input(z.object({
         code: z.string().max(10),
         description: z.string(),
+        workRvu: z.number().optional(),
+        procedureType: z.enum(["imaging", "procedure", "visit"]).optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.createCptCode(input);
+        const { workRvu, ...rest } = input;
+        return await db.createCptCode({
+          ...rest,
+          workRvu: workRvu !== undefined ? workRvu.toString() : undefined,
+        });
       }),
     
     update: adminProcedure

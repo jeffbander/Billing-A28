@@ -39,6 +39,8 @@ export default function RatesManagement() {
   const [editValue, setEditValue] = useState("");
   const [newCptCode, setNewCptCode] = useState("");
   const [newCptDescription, setNewCptDescription] = useState("");
+  const [newWorkRvu, setNewWorkRvu] = useState("");
+  const [newProcedureType, setNewProcedureType] = useState<"imaging" | "procedure" | "visit">("procedure");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const createCptMutation = trpc.cptCodes.create.useMutation({
@@ -46,6 +48,8 @@ export default function RatesManagement() {
       toast.success("CPT code added successfully");
       setNewCptCode("");
       setNewCptDescription("");
+      setNewWorkRvu("");
+      setNewProcedureType("procedure");
       setIsAddDialogOpen(false);
       utils.rates.listWithDetails.invalidate();
     },
@@ -84,9 +88,16 @@ export default function RatesManagement() {
       toast.error("Please enter both CPT code and description");
       return;
     }
+    const workRvu = newWorkRvu.trim() ? parseFloat(newWorkRvu) : undefined;
+    if (newWorkRvu.trim() && (isNaN(workRvu!) || workRvu! < 0)) {
+      toast.error("Work RVU must be a positive number");
+      return;
+    }
     await createCptMutation.mutateAsync({
       code: newCptCode.trim(),
       description: newCptDescription.trim(),
+      workRvu,
+      procedureType: newProcedureType,
     });
   };
 
@@ -254,6 +265,32 @@ export default function RatesManagement() {
                         value={newCptDescription}
                         onChange={(e) => setNewCptDescription(e.target.value)}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="work-rvu">Work RVU (Optional)</Label>
+                      <Input
+                        id="work-rvu"
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g., 1.40"
+                        value={newWorkRvu}
+                        onChange={(e) => setNewWorkRvu(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">CMS work RVU value for this procedure</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="procedure-type">Procedure Type</Label>
+                      <select
+                        id="procedure-type"
+                        value={newProcedureType}
+                        onChange={(e) => setNewProcedureType(e.target.value as "imaging" | "procedure" | "visit")}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="procedure">Procedure</option>
+                        <option value="imaging">Imaging</option>
+                        <option value="visit">Visit</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">Imaging codes track orders/reads separately</p>
                     </div>
                   </div>
                   <DialogFooter>

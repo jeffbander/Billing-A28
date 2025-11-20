@@ -147,3 +147,24 @@
 - [ ] Build provider-centric results view
 - [ ] Build institution-centric results view
 - [ ] Test Type 1, Type 2, and Type 3 provider scenarios
+
+## Valuation Scenario Feature
+- [x] Add Work RVU field to CPT Codes management UI
+- [x] Add Procedure Type selector to CPT Codes management UI (Imaging/Procedure/Visit)
+- [x] Populate Work RVU data for existing 9 CPT codes
+- [ ] Create valuations table for storing valuation scenarios
+- [ ] Create valuation_activities table for CPT code activities (orders/reads/performs)
+- [ ] Add backend API for valuation CRUD operations
+- [ ] Add valuation calculation endpoint
+- [ ] Create Valuation Scenario Builder page
+- [ ] Add provider selection to Valuation Builder
+- [ ] Add CPT code activity inputs (orders/reads for imaging, performs for others)
+- [ ] Implement valuation calculation engine with provider attribution logic
+- [ ] Calculate RVUs by provider
+- [ ] Calculate professional revenue by provider type
+- [ ] Calculate technical revenue to Mount Sinai West
+- [ ] Create Valuation Results display page
+- [ ] Show RVU breakdown by CPT code
+- [ ] Show revenue attribution (professional $ destination, technical $ to facility)
+- [ ] Add navigation to Valuation scenarios from dashboard
+- [ ] Test Type 1, Type 2, and Type 3 provider valuations
