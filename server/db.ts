@@ -12,7 +12,9 @@ import {
   calculationSettings, InsertCalculationSettings, CalculationSettings,
   institutions, InsertInstitution, Institution,
   providers, InsertProvider, Provider,
-  scenarioProviderActivities, InsertScenarioProviderActivity, ScenarioProviderActivity
+  scenarioProviderActivities, InsertScenarioProviderActivity, ScenarioProviderActivity,
+  valuations, InsertValuation, Valuation,
+  valuationActivities, InsertValuationActivity, ValuationActivity
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -660,4 +662,108 @@ export async function deleteProvider(id: number): Promise<boolean> {
     console.error("[Database] Failed to delete provider:", error);
     return false;
   }
+}
+
+
+// ===== Valuations =====
+
+export async function createValuation(data: InsertValuation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(valuations).values(data);
+  return await getValuationById(Number(result[0].insertId));
+}
+
+export async function getValuationById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(valuations).where(eq(valuations.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getValuationsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(valuations)
+    .where(eq(valuations.userId, userId))
+    .orderBy(desc(valuations.createdAt));
+}
+
+export async function getValuationWithDetails(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const valuation = await getValuationById(id);
+  if (!valuation) return undefined;
+  
+  const activities = await db.select().from(valuationActivities)
+    .where(eq(valuationActivities.valuationId, id));
+  
+  return {
+    ...valuation,
+    activities,
+  };
+}
+
+export async function updateValuation(id: number, data: Partial<InsertValuation>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(valuations).set(data).where(eq(valuations.id, id));
+  return await getValuationById(id);
+}
+
+export async function deleteValuation(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete activities first
+  await db.delete(valuationActivities).where(eq(valuationActivities.valuationId, id));
+  // Then delete valuation
+  await db.delete(valuations).where(eq(valuations.id, id));
+}
+
+// ===== Valuation Activities =====
+
+export async function createValuationActivity(data: InsertValuationActivity) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(valuationActivities).values(data);
+  return await getValuationActivityById(Number(result[0].insertId));
+}
+
+export async function getValuationActivityById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(valuationActivities)
+    .where(eq(valuationActivities.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getValuationActivitiesByValuation(valuationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(valuationActivities)
+    .where(eq(valuationActivities.valuationId, valuationId));
+}
+
+export async function updateValuationActivity(id: number, data: Partial<InsertValuationActivity>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(valuationActivities).set(data).where(eq(valuationActivities.id, id));
+  return await getValuationActivityById(id);
+}
+
+export async function deleteValuationActivity(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(valuationActivities).where(eq(valuationActivities.id, id));
 }

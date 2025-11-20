@@ -1,7 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, Database, Calculator, Users } from "lucide-react";
+import { BarChart3, Database, Calculator, Users, UserCheck } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Dashboard() {
@@ -82,7 +82,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <Card 
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => setLocation("/scenarios")}
@@ -105,6 +105,19 @@ export default function Dashboard() {
               <CardTitle>Manage Rates</CardTitle>
               <CardDescription>
                 View and edit reimbursement rates for different CPT codes, payers, and site types
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setLocation("/valuations/new")}
+          >
+            <CardHeader>
+              <UserCheck className="h-10 w-10 text-primary mb-2" />
+              <CardTitle>Create Provider Valuation</CardTitle>
+              <CardDescription>
+                Analyze a provider's RVU productivity and revenue attribution
               </CardDescription>
             </CardHeader>
           </Card>

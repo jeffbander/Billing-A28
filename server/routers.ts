@@ -861,6 +861,212 @@ export const appRouter = router({
         return { success };
       }),
   }),
+
+  // Valuation Management
+  valuations: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getValuationsByUser(ctx.user.id);
+    }),
+    
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getValuationById(input.id);
+      }),
+    
+    getWithDetails: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getValuationWithDetails(input.id);
+      }),
+    
+    create: protectedProcedure
+      .input(z.object({
+        providerId: z.number(),
+        name: z.string().max(200),
+        description: z.string().optional(),
+        monthlyPatients: z.number().default(0),
+        activities: z.array(z.object({
+          cptCodeId: z.number(),
+          monthlyOrders: z.number().default(0),
+          monthlyReads: z.number().default(0),
+          monthlyPerforms: z.number().default(0),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { activities, ...valuationData } = input;
+        
+        // Create valuation
+        const valuation = await db.createValuation({
+          ...valuationData,
+          userId: ctx.user.id,
+        });
+        
+        if (!valuation) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create valuation' });
+        }
+        
+        // Create activities
+        for (const activity of activities) {
+          await db.createValuationActivity({
+            valuationId: valuation.id,
+            ...activity,
+          });
+        }
+        
+        return { id: valuation.id, success: true };
+      }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().max(200).optional(),
+        description: z.string().optional(),
+        monthlyPatients: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateValuation(id, data);
+        return { success: true };
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteValuation(input.id);
+        return { success: true };
+      }),
+    
+    calculate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const valuation = await db.getValuationWithDetails(input.id);
+        if (!valuation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Valuation not found' });
+        }
+        
+        const provider = await db.getProviderById(valuation.providerId);
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+        
+        const institution = provider.homeInstitutionId 
+          ? await db.getInstitutionById(provider.homeInstitutionId)
+          : null;
+        
+        // Get all CPT codes and rates
+        const allCptCodes = await db.getAllCptCodes();
+        const allRates = await db.getRatesWithDetails();
+        
+        // Calculate RVUs and revenue for each activity
+        const activityResults = [];
+        let totalRvus = 0;
+        let totalProfessionalRevenue = 0;
+        let totalTechnicalRevenue = 0;
+        
+        for (const activity of valuation.activities) {
+          const cptCode = allCptCodes.find(c => c.id === activity.cptCodeId);
+          if (!cptCode) continue;
+          
+          const workRvu = cptCode.workRvu ? parseFloat(cptCode.workRvu) : 0;
+          const isImaging = cptCode.procedureType === 'imaging';
+          
+          // Calculate RVUs
+          let activityRvus = 0;
+          if (isImaging) {
+            // For imaging: RVUs only from reads
+            activityRvus = (activity.monthlyReads || 0) * workRvu;
+          } else {
+            // For procedures/visits: RVUs from performs
+            activityRvus = (activity.monthlyPerforms || 0) * workRvu;
+          }
+          totalRvus += activityRvus;
+          
+          // Calculate revenue
+          // Get Article 28 rates (assuming provider works at Article 28 facility)
+          const professionalRate = allRates.find(
+            r => r.cptCodeId === cptCode.id && 
+                 r.siteType === 'Article28' && 
+                 r.component === 'Professional' &&
+                 r.payerType === 'Medicare' // Use Medicare as base
+          );
+          
+          const technicalRate = allRates.find(
+            r => r.cptCodeId === cptCode.id && 
+                 r.siteType === 'Article28' && 
+                 r.component === 'Technical' &&
+                 r.payerType === 'Medicare'
+          );
+          
+          let activityProfessionalRevenue = 0;
+          let activityTechnicalRevenue = 0;
+          
+          if (isImaging) {
+            // Professional revenue from reads
+            if (professionalRate) {
+              activityProfessionalRevenue = (activity.monthlyReads || 0) * professionalRate.rate;
+            }
+            // Technical revenue from orders (someone has to read them)
+            if (technicalRate) {
+              activityTechnicalRevenue = (activity.monthlyOrders || 0) * technicalRate.rate;
+            }
+          } else {
+            // Professional revenue from performs
+            if (professionalRate) {
+              activityProfessionalRevenue = (activity.monthlyPerforms || 0) * professionalRate.rate;
+            }
+            // No technical revenue for non-imaging procedures
+          }
+          
+          totalProfessionalRevenue += activityProfessionalRevenue;
+          totalTechnicalRevenue += activityTechnicalRevenue;
+          
+          activityResults.push({
+            cptCode: cptCode.code,
+            description: cptCode.description,
+            procedureType: cptCode.procedureType,
+            workRvu,
+            monthlyOrders: activity.monthlyOrders,
+            monthlyReads: activity.monthlyReads,
+            monthlyPerforms: activity.monthlyPerforms,
+            rvusEarned: activityRvus,
+            professionalRevenue: activityProfessionalRevenue,
+            technicalRevenue: activityTechnicalRevenue,
+          });
+        }
+        
+        // Determine revenue attribution based on provider type
+        let professionalRevenueDestination = '';
+        let professionalRevenueRecipient = '';
+        
+        if (provider.providerType === 'Type1') {
+          professionalRevenueDestination = 'Mount Sinai West Article 28';
+          professionalRevenueRecipient = provider.name;
+        } else if (provider.providerType === 'Type2') {
+          professionalRevenueDestination = institution?.name || 'Home Institution';
+          professionalRevenueRecipient = institution?.name || 'Home Institution';
+        } else if (provider.providerType === 'Type3') {
+          professionalRevenueDestination = 'Reading Physician';
+          professionalRevenueRecipient = 'Other Providers';
+          totalRvus = 0; // Type 3 providers don't earn RVUs
+        }
+        
+        return {
+          valuation,
+          provider,
+          institution,
+          activityResults,
+          summary: {
+            totalRvus,
+            totalProfessionalRevenue,
+            totalTechnicalRevenue,
+            professionalRevenueDestination,
+            professionalRevenueRecipient,
+            technicalRevenueDestination: 'Mount Sinai West Article 28',
+          },
+        };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

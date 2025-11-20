@@ -202,3 +202,37 @@ export const calculationSettings = mysqlTable("calculation_settings", {
 
 export type CalculationSettings = typeof calculationSettings.$inferSelect;
 export type InsertCalculationSettings = typeof calculationSettings.$inferInsert;
+
+/**
+ * Valuations table - stores provider valuation scenarios
+ */
+export const valuations = mysqlTable("valuations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  providerId: int("providerId").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  monthlyPatients: int("monthlyPatients").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Valuation = typeof valuations.$inferSelect;
+export type InsertValuation = typeof valuations.$inferInsert;
+
+/**
+ * Valuation activities table - stores CPT code activities for each valuation
+ */
+export const valuationActivities = mysqlTable("valuation_activities", {
+  id: int("id").autoincrement().primaryKey(),
+  valuationId: int("valuationId").notNull(),
+  cptCodeId: int("cptCodeId").notNull(),
+  monthlyOrders: int("monthlyOrders").default(0), // For imaging: how many ordered
+  monthlyReads: int("monthlyReads").default(0),   // For imaging: how many read
+  monthlyPerforms: int("monthlyPerforms").default(0), // For procedures/visits: how many performed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ValuationActivity = typeof valuationActivities.$inferSelect;
+export type InsertValuationActivity = typeof valuationActivities.$inferInsert;

@@ -15,6 +15,8 @@ import AuthPage from "./pages/AuthPage";
 import GuestRedirect from "./pages/GuestRedirect";
 import ManageInstitutions from "./pages/ManageInstitutions";
 import ManageProviders from "./pages/ManageProviders";
+import ValuationBuilder from "./pages/ValuationBuilder";
+import ValuationResults from "./pages/ValuationResults";
 
 
 function Router() {
@@ -29,6 +31,8 @@ function Router() {
 
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
+      <Route path={"/valuations/new"} component={ValuationBuilder} />
+      <Route path={"/valuations/:id"} component={ValuationResults} />
       <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/admin/institutions"} component={ManageInstitutions} />
       <Route path={"/admin/providers"} component={ManageProviders} />
