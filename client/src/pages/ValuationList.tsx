@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Eye, MoreVertical, Trash2, GitCompare, Plus, Search, Pencil } from "lucide-react";
+import { Eye, MoreVertical, Trash2, GitCompare, Plus, Search, Pencil, Copy, Edit } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -45,6 +45,17 @@ export default function ValuationList() {
     },
     onError: (error) => {
       toast.error(`Failed to delete valuation: ${error.message}`);
+    },
+  });
+  
+  const duplicateValuation = trpc.valuations.duplicate.useMutation({
+    onSuccess: (newValuation) => {
+      toast.success(`Valuation duplicated: ${newValuation?.name}`);
+      refetch();
+      if (newValuation) navigate(`/valuations/${newValuation.id}`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to duplicate valuation: ${error.message}`);
     },
   });
 
@@ -143,12 +154,21 @@ export default function ValuationList() {
                 </SelectContent>
               </Select>
 
-              {/* Compare Button */}
+              {/* Compare and Bulk Edit Buttons */}
               {selectedValuations.length > 0 && (
-                <Button onClick={handleCompare} variant="outline">
-                  <GitCompare className="w-4 h-4 mr-2" />
-                  Compare ({selectedValuations.length})
-                </Button>
+                <>
+                  <Button onClick={handleCompare} variant="outline">
+                    <GitCompare className="w-4 h-4 mr-2" />
+                    Compare ({selectedValuations.length})
+                  </Button>
+                  <Button
+                    onClick={() => navigate(`/valuations/bulk-edit?ids=${selectedValuations.join(",")}`)}
+                    variant="outline"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Bulk Edit ({selectedValuations.length})
+                  </Button>
+                </>
               )}
             </div>
           </CardContent>
@@ -267,6 +287,12 @@ export default function ValuationList() {
                             >
                               <Pencil className="w-4 h-4 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => duplicateValuation.mutate({ id: valuation.id })}
+                            >
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {

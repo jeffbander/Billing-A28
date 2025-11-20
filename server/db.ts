@@ -814,6 +814,38 @@ export async function deleteValuation(id: number) {
   await db.delete(valuations).where(eq(valuations.id, id));
 }
 
+export async function duplicateValuation(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get original valuation
+  const original = await getValuationById(id);
+  if (!original) throw new Error("Valuation not found");
+  
+  // Create new valuation with "Copy of" prefix
+  const newValuation = await createValuation({
+    userId,
+    name: `Copy of ${original.name}`,
+    description: original.description,
+    providerId: original.providerId,
+    monthlyPatients: original.monthlyPatients,
+  });
+  
+  // Copy all activities
+  const originalActivities = await getValuationActivitiesByValuation(id);
+  for (const activity of originalActivities) {
+    await createValuationActivity({
+      valuationId: newValuation!.id,
+      cptCodeId: activity.cptCodeId,
+      monthlyOrders: activity.monthlyOrders,
+      monthlyReads: activity.monthlyReads,
+      monthlyPerforms: activity.monthlyPerforms,
+    });
+  }
+  
+  return newValuation;
+}
+
 // ===== Valuation Activities =====
 
 export async function createValuationActivity(data: InsertValuationActivity) {

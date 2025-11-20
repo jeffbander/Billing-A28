@@ -221,3 +221,22 @@
 - [x] Test edit workflow: list → edit → save → view results (changed 50 to 60 performs)
 - [x] Verified calculations update correctly (58.20 RVUs, $426K revenue)
 - [x] Create comprehensive vitest tests for edit functionality (14 tests passing)
+
+## Valuation Duplication Feature
+- [x] Add duplicateValuation function to db.ts
+- [x] Add duplicate backend endpoint to valuations router
+- [x] Add "Duplicate" button to valuation list dropdown menu
+- [x] Test duplication creates exact copy with "Copy of" prefix and new ID
+- [x] Verify duplicated activities are independent from original
+- [x] Create comprehensive vitest tests for duplication (4 tests passing)
+
+## Bulk Edit Valuations Feature
+- [x] Create BulkEditValuations page component
+- [x] Add bulkUpdate backend endpoint to valuations router
+- [x] Implement UI for selecting CPT code changes to apply
+- [x] Add "Bulk Edit" button that appears when multiple valuations selected
+- [x] Implement apply changes across all selected valuations (delete old, create new)
+- [x] Add confirmation dialog before bulk update
+- [x] Add route /valuations/bulk-edit to App.tsx
+- [x] Create comprehensive vitest tests for bulk edit (3 tests passing)
+- [x] All 53 valuation tests passing (valuations: 19, edit: 14, list/comparison: 13, duplication/bulk: 7)

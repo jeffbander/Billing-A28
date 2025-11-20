@@ -970,6 +970,46 @@ export const appRouter = router({
         return { success: true };
       }),
     
+    duplicate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const newValuation = await db.duplicateValuation(input.id, ctx.user.id);
+        return newValuation;
+      }),
+    
+    bulkUpdate: protectedProcedure
+      .input(z.object({
+        valuationIds: z.array(z.number()),
+        activities: z.array(z.object({
+          cptCodeId: z.number(),
+          monthlyOrders: z.number().default(0),
+          monthlyReads: z.number().default(0),
+          monthlyPerforms: z.number().default(0),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const { valuationIds, activities } = input;
+        
+        // Update each valuation with the same activities
+        for (const valuationId of valuationIds) {
+          // Delete existing activities
+          const existingActivities = await db.getValuationActivitiesByValuation(valuationId);
+          for (const activity of existingActivities) {
+            await db.deleteValuationActivity(activity.id);
+          }
+          
+          // Create new activities
+          for (const activity of activities) {
+            await db.createValuationActivity({
+              valuationId,
+              ...activity,
+            });
+          }
+        }
+        
+        return { success: true, updatedCount: valuationIds.length };
+      }),
+    
     calculate: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
