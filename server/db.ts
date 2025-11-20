@@ -692,6 +692,94 @@ export async function getValuationsByUser(userId: number) {
     .orderBy(desc(valuations.createdAt));
 }
 
+export async function getValuationsWithSummary(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const userValuations = await db.select().from(valuations)
+    .where(eq(valuations.userId, userId))
+    .orderBy(desc(valuations.createdAt));
+  
+  // Enrich each valuation with provider info and calculated totals
+  const enriched = await Promise.all(
+    userValuations.map(async (valuation) => {
+      const provider = await getProviderById(valuation.providerId);
+      const activities = await getValuationActivitiesByValuation(valuation.id);
+      
+      // Calculate totals
+      let totalRvus = 0;
+      let professionalRevenue = 0;
+      let technicalRevenue = 0;
+      
+      for (const activity of activities) {
+        const cptCode = await getCptCodeById(activity.cptCodeId);
+        if (!cptCode) continue;
+        
+        const workRvu = Number(cptCode.workRvu) || 0;
+        const quantity = cptCode.procedureType === 'imaging' 
+          ? (activity.monthlyReads || 0)
+          : (activity.monthlyPerforms || 0);
+        
+        totalRvus += quantity * workRvu;
+      }
+      
+      // Get rates for revenue calculation
+      const institution = provider ? await getInstitutionById(provider.homeInstitutionId) : null;
+      
+      // Calculate revenue based on activities and rates
+      for (const activity of activities) {
+        const cptCode = await getCptCodeById(activity.cptCodeId);
+        if (!cptCode) continue;
+        
+        const quantity = cptCode.procedureType === 'imaging'
+          ? (activity.monthlyReads || 0)
+          : (activity.monthlyPerforms || 0);
+        
+        // Get Medicare Professional rate (default for calculation)
+        const rateRecords = await db.select().from(rates)
+          .where(
+            and(
+              eq(rates.cptCodeId, cptCode.id),
+              eq(rates.payerType, 'Medicare'),
+              eq(rates.component, 'Professional')
+            )
+          )
+          .limit(1);
+        
+        const professionalRate = rateRecords[0] ? Number(rateRecords[0].rate) : 0;
+        professionalRevenue += quantity * professionalRate;
+        
+        // Get technical rate
+        const techRates = await db.select().from(rates)
+          .where(
+            and(
+              eq(rates.cptCodeId, cptCode.id),
+              eq(rates.payerType, 'Medicare'),
+              eq(rates.component, 'Technical')
+            )
+          )
+          .limit(1);
+        
+        const technicalRate = techRates[0] ? Number(techRates[0].rate) : 0;
+        technicalRevenue += quantity * technicalRate;
+      }
+      
+      return {
+        ...valuation,
+        providerName: provider?.name,
+        providerType: provider?.providerType,
+        homeInstitution: institution?.name,
+        totalRvus,
+        professionalRevenue,
+        technicalRevenue,
+        activityCount: activities.length,
+      };
+    })
+  );
+  
+  return enriched;
+}
+
 export async function getValuationWithDetails(id: number) {
   const db = await getDb();
   if (!db) return undefined;

@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { BarChart3, Database, Calculator, Users, UserCheck } from "lucide-react";
 import { useLocation } from "wouter";
@@ -109,17 +110,29 @@ export default function Dashboard() {
             </CardHeader>
           </Card>
 
-          <Card 
-            className="cursor-pointer hover:border-primary transition-colors"
-            onClick={() => setLocation("/valuations/new")}
-          >
+          <Card className="hover:border-primary transition-colors">
             <CardHeader>
               <UserCheck className="h-10 w-10 text-primary mb-2" />
-              <CardTitle>Create Provider Valuation</CardTitle>
+              <CardTitle>Provider Valuations</CardTitle>
               <CardDescription>
-                Analyze a provider's RVU productivity and revenue attribution
+                Analyze provider RVU productivity and revenue attribution
               </CardDescription>
             </CardHeader>
+            <CardContent className="flex gap-2">
+              <Button 
+                onClick={() => setLocation("/valuations/new")}
+                className="flex-1"
+              >
+                Create New
+              </Button>
+              <Button 
+                onClick={() => setLocation("/valuations")}
+                variant="outline"
+                className="flex-1"
+              >
+                View All
+              </Button>
+            </CardContent>
           </Card>
         </div>
 

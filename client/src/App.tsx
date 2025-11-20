@@ -17,6 +17,8 @@ import ManageInstitutions from "./pages/ManageInstitutions";
 import ManageProviders from "./pages/ManageProviders";
 import ValuationBuilder from "./pages/ValuationBuilder";
 import ValuationResults from "./pages/ValuationResults";
+import ValuationList from "./pages/ValuationList";
+import ValuationComparison from "./pages/ValuationComparison";
 
 
 function Router() {
@@ -31,6 +33,8 @@ function Router() {
 
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
+      <Route path={"/valuations"} component={ValuationList} />
+      <Route path={"/valuations/compare"} component={ValuationComparison} />
       <Route path={"/valuations/new"} component={ValuationBuilder} />
       <Route path={"/valuations/:id"} component={ValuationResults} />
       <Route path={"/admin"} component={AdminPanel} />

@@ -865,7 +865,7 @@ export const appRouter = router({
   // Valuation Management
   valuations: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getValuationsByUser(ctx.user.id);
+      return await db.getValuationsWithSummary(ctx.user.id);
     }),
     
     getById: protectedProcedure

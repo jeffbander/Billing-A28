@@ -169,3 +169,42 @@
 - [x] Add navigation to Valuation scenarios from dashboard
 - [x] Test Type 1 provider valuation end-to-end
 - [x] Create comprehensive vitest test suite for valuations (19 tests passing)
+
+## Valuation List and Comparison Features
+- [ ] Create Valuation List/History page showing all saved valuations
+- [ ] Add filtering by provider, date range, and search by name
+- [ ] Add sorting by date, provider name, RVUs, revenue
+- [ ] Add quick actions (view, edit, delete, compare) for each valuation
+- [ ] Create Valuation Comparison View for side-by-side analysis
+- [ ] Allow selecting 2-4 valuations to compare
+- [ ] Show comparison table with RVUs, revenue, and activity differences
+- [ ] Add visual charts for RVU and revenue comparison
+- [ ] Add navigation from dashboard to Valuation List
+- [ ] Add "Compare" button on Valuation Results page
+- [ ] Test complete workflow: create → list → compare → edit
+- [ ] Create vitest tests for list and comparison features
+
+## Valuation List Feature - Phase 2 Complete
+- [x] Created getValuationsWithSummary database function with enriched data
+- [x] Created ValuationList page component with table display
+- [x] Added search functionality by name or provider
+- [x] Added sorting by date, provider name, and RVUs
+- [x] Added checkbox selection for multiple valuations
+- [x] Added Compare button that appears when selections made
+- [x] Added dropdown actions menu (View Details, Compare, Delete)
+- [x] Added route /valuations to App.tsx
+- [x] Updated Dashboard card with "Create New" and "View All" buttons
+- [x] Tested navigation from list to results page
+- [x] Tested selection tracking and Compare button
+
+## Valuation Comparison Feature - Phase 3 Complete
+- [x] Created ValuationComparison page component
+- [x] Fixed React hooks error by using useQueries instead of mapping useQuery
+- [x] Display summary cards for each valuation with key metrics
+- [x] Added visual comparison chart (bar chart with RVUs and revenue in $K)
+- [x] Calculate and display differences vs baseline (RVU %, Prof. Revenue %, Tech. Revenue %)
+- [x] Show activity comparison table across valuations (CPT codes side-by-side)
+- [x] Added route /valuations/compare to App.tsx
+- [x] Tested navigation from list to comparison with query params
+- [x] Tested comparison with 2 different providers (Dr. Bander vs Dr. Mehta)
+- [x] Verified calculations: +3.5 RVUs (+7.8%), +$88K Prof. Revenue (+33.0%)
