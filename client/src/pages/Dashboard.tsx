@@ -118,19 +118,28 @@ export default function Dashboard() {
                 Analyze provider RVU productivity and revenue attribution
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-2">
+            <CardContent className="space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setLocation("/valuations/new")}
+                  className="flex-1"
+                >
+                  Create New
+                </Button>
+                <Button 
+                  onClick={() => setLocation("/valuations")}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  View All
+                </Button>
+              </div>
               <Button 
-                onClick={() => setLocation("/valuations/new")}
-                className="flex-1"
+                onClick={() => setLocation("/valuations/analytics")}
+                variant="secondary"
+                className="w-full"
               >
-                Create New
-              </Button>
-              <Button 
-                onClick={() => setLocation("/valuations")}
-                variant="outline"
-                className="flex-1"
-              >
-                View All
+                📊 View Analytics
               </Button>
             </CardContent>
           </Card>

@@ -887,3 +887,144 @@ export async function deleteValuationActivity(id: number) {
   
   await db.delete(valuationActivities).where(eq(valuationActivities.id, id));
 }
+
+// ===== Valuation Analytics =====
+export async function getValuationAnalytics(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get all valuations for the user with enriched data
+  const userValuations = await getValuationsWithSummary(userId);
+  
+  // Get all CPT codes and rates for calculations
+  const allCptCodes = await getAllCptCodes();
+  const allRates = await getRatesWithDetails();
+  
+  // Calculate totals
+  let totalRvus = 0;
+  let totalProfessionalRevenue = 0;
+  let totalTechnicalRevenue = 0;
+  
+  // Provider metrics: { providerId: { name, type, rvus, profRevenue, techRevenue, valuationCount } }
+  const providerMetrics = new Map<number, {
+    providerId: number;
+    providerName: string;
+    providerType: string;
+    totalRvus: number;
+    totalProfRevenue: number;
+    totalTechRevenue: number;
+    valuationCount: number;
+  }>();
+  
+  // CPT code usage: { cptCodeId: { code, description, usageCount, totalRvus } }
+  const cptCodeUsage = new Map<number, {
+    cptCodeId: number;
+    code: string;
+    description: string;
+    usageCount: number;
+    totalRvus: number;
+  }>();
+  
+  // Revenue trends by month: { month: { profRevenue, techRevenue, rvus } }
+  const revenueTrends = new Map<string, {
+    month: string;
+    professionalRevenue: number;
+    technicalRevenue: number;
+    totalRvus: number;
+    valuationCount: number;
+  }>();
+  
+  // Process each valuation
+  for (const valuation of userValuations) {
+    // Add to totals
+    totalRvus += valuation.totalRvus;
+    totalProfessionalRevenue += valuation.professionalRevenue;
+    totalTechnicalRevenue += valuation.technicalRevenue;
+    
+    // Update provider metrics
+    if (!providerMetrics.has(valuation.providerId)) {
+      providerMetrics.set(valuation.providerId, {
+        providerId: valuation.providerId,
+        providerName: valuation.providerName || 'Unknown',
+        providerType: valuation.providerType || 'Unknown',
+        totalRvus: 0,
+        totalProfRevenue: 0,
+        totalTechRevenue: 0,
+        valuationCount: 0,
+      });
+    }
+    const providerMetric = providerMetrics.get(valuation.providerId)!;
+    providerMetric.totalRvus += valuation.totalRvus;
+    providerMetric.totalProfRevenue += valuation.professionalRevenue;
+    providerMetric.totalTechRevenue += valuation.technicalRevenue;
+    providerMetric.valuationCount += 1;
+    
+    // Update revenue trends (group by month)
+    const month = new Date(valuation.createdAt).toISOString().slice(0, 7); // YYYY-MM
+    if (!revenueTrends.has(month)) {
+      revenueTrends.set(month, {
+        month,
+        professionalRevenue: 0,
+        technicalRevenue: 0,
+        totalRvus: 0,
+        valuationCount: 0,
+      });
+    }
+    const trend = revenueTrends.get(month)!;
+    trend.professionalRevenue += valuation.professionalRevenue;
+    trend.technicalRevenue += valuation.technicalRevenue;
+    trend.totalRvus += valuation.totalRvus;
+    trend.valuationCount += 1;
+    
+    // Get activities for this valuation to track CPT code usage
+    const activities = await getValuationActivitiesByValuation(valuation.id);
+    for (const activity of activities) {
+      const cptCode = allCptCodes.find(c => c.id === activity.cptCodeId);
+      if (!cptCode) continue;
+      
+      // Calculate RVUs for this activity
+      const totalPerforms = (activity.monthlyOrders || 0) + (activity.monthlyReads || 0) + (activity.monthlyPerforms || 0);
+      const activityRvus = totalPerforms * (Number(cptCode.workRvu) || 0);
+      
+      // Update CPT code usage
+      if (!cptCodeUsage.has(activity.cptCodeId)) {
+        cptCodeUsage.set(activity.cptCodeId, {
+          cptCodeId: activity.cptCodeId,
+          code: cptCode.code,
+          description: cptCode.description,
+          usageCount: 0,
+          totalRvus: 0,
+        });
+      }
+      const usage = cptCodeUsage.get(activity.cptCodeId)!;
+      usage.usageCount += 1;
+      usage.totalRvus += activityRvus;
+    }
+  }
+  
+  // Convert maps to arrays and sort
+  const providerProductivity = Array.from(providerMetrics.values())
+    .sort((a, b) => b.totalRvus - a.totalRvus);
+  
+  const topCptCodes = Array.from(cptCodeUsage.values())
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 10); // Top 10 CPT codes
+  
+  const trends = Array.from(revenueTrends.values())
+    .sort((a, b) => a.month.localeCompare(b.month));
+  
+  return {
+    summary: {
+      totalRvus,
+      totalProfessionalRevenue,
+      totalTechnicalRevenue,
+      totalRevenue: totalProfessionalRevenue + totalTechnicalRevenue,
+      totalValuations: userValuations.length,
+      activeProviders: providerMetrics.size,
+      avgRvusPerValuation: userValuations.length > 0 ? totalRvus / userValuations.length : 0,
+    },
+    providerProductivity,
+    topCptCodes,
+    revenueTrends: trends,
+  };
+}

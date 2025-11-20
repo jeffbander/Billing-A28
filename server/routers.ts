@@ -1139,6 +1139,11 @@ export const appRouter = router({
           },
         };
       }),
+    
+    analytics: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getValuationAnalytics(ctx.user.id);
+      }),
   }),
 });
 

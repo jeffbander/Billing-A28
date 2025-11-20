@@ -18,7 +18,8 @@ import ManageProviders from "./pages/ManageProviders";
 import ValuationBuilder from "./pages/ValuationBuilder";
 import ValuationResults from "./pages/ValuationResults";
 import ValuationList from "./pages/ValuationList";
-import ValuationComparison from "./pages/ValuationComparison";
+import ValuationComparison from "@/pages/ValuationComparison";
+import ValuationAnalytics from "@/pages/ValuationAnalytics";
 import EditValuation from "./pages/EditValuation";
 import BulkEditValuations from "./pages/BulkEditValuations";
 
@@ -36,7 +37,8 @@ function Router() {
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
       <Route path={"/valuations"} component={ValuationList} />
-      <Route path={"/valuations/compare"} component={ValuationComparison} />
+        <Route path="/valuations/compare" component={ValuationComparison} />
+      <Route path="/valuations/analytics" component={ValuationAnalytics} />
       <Route path={"/valuations/:id/edit"} component={EditValuation} />
       <Route path={"/valuations/bulk-edit"} component={BulkEditValuations} />
       <Route path={"/valuations/new"} component={ValuationBuilder} />
