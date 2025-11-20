@@ -13,6 +13,8 @@ import ScenarioResults from "./pages/ScenarioResults.tsx";
 import AdminPanel from "./pages/AdminPanel";
 import AuthPage from "./pages/AuthPage";
 import GuestRedirect from "./pages/GuestRedirect";
+import ManageInstitutions from "./pages/ManageInstitutions";
+import ManageProviders from "./pages/ManageProviders";
 
 
 function Router() {
@@ -28,6 +30,8 @@ function Router() {
       <Route path={"/scenarios"} component={ScenarioBuilder} />
       <Route path={"/scenarios/:id"} component={ScenarioResults} />
       <Route path={"/admin"} component={AdminPanel} />
+      <Route path={"/admin/institutions"} component={ManageInstitutions} />
+      <Route path={"/admin/providers"} component={ManageProviders} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

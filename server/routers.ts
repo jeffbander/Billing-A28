@@ -756,6 +756,104 @@ export const appRouter = router({
         await db.upsertCalculationSettings(input);
         return { success: true };
       }),
+    
+    // Institutions Management
+    listInstitutions: adminProcedure.query(async () => {
+      return await db.getAllInstitutions();
+    }),
+    
+    listActiveInstitutions: guestOrAuthProcedure.query(async () => {
+      return await db.getActiveInstitutions();
+    }),
+    
+    getInstitution: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getInstitutionById(input.id);
+      }),
+    
+    createInstitution: adminProcedure
+      .input(z.object({
+        name: z.string().min(1).max(200),
+        shortName: z.string().max(50).optional(),
+        active: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createInstitution(input);
+      }),
+    
+    updateInstitution: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(200).optional(),
+        shortName: z.string().max(50).optional(),
+        active: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return await db.updateInstitution(id, updates);
+      }),
+    
+    deleteInstitution: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await db.deleteInstitution(input.id);
+        return { success };
+      }),
+    
+    // Providers Management
+    listProviders: adminProcedure.query(async () => {
+      return await db.getAllProviders();
+    }),
+    
+    listActiveProviders: guestOrAuthProcedure.query(async () => {
+      return await db.getActiveProviders();
+    }),
+    
+    getProvider: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getProviderById(input.id);
+      }),
+    
+    getProvidersByInstitution: adminProcedure
+      .input(z.object({ institutionId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getProvidersByInstitution(input.institutionId);
+      }),
+    
+    createProvider: adminProcedure
+      .input(z.object({
+        name: z.string().min(1).max(200),
+        providerType: z.enum(["Type1", "Type2", "Type3"]),
+        homeInstitutionId: z.number(),
+        active: z.boolean().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createProvider(input);
+      }),
+    
+    updateProvider: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(200).optional(),
+        providerType: z.enum(["Type1", "Type2", "Type3"]).optional(),
+        homeInstitutionId: z.number().optional(),
+        active: z.boolean().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return await db.updateProvider(id, updates);
+      }),
+    
+    deleteProvider: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await db.deleteProvider(input.id);
+        return { success };
+      }),
   }),
 });
 

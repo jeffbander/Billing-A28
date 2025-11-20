@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Shield, ShieldOff, Calculator } from "lucide-react";
+import { Shield, ShieldOff, Calculator, Building2, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -99,6 +99,32 @@ export default function AdminPanel() {
   return (
     <DashboardLayout>
       <div className="container py-8 space-y-8">
+        {/* Quick Navigation */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/admin/institutions'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building2 className="h-5 w-5" />
+                Manage Institutions
+              </CardTitle>
+              <CardDescription>
+                Configure home institutions for provider attribution
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/admin/providers'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <UserCircle className="h-5 w-5" />
+                Manage Providers
+              </CardTitle>
+              <CardDescription>
+                Manage physician profiles and provider types
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
         {/* Calculation Settings Card */}
         <Card>
           <CardHeader>

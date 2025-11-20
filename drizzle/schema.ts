@@ -25,12 +25,47 @@ export const cptCodes = mysqlTable("cpt_codes", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 10 }).notNull().unique(),
   description: text("description").notNull(),
+  workRvu: decimal("workRvu", { precision: 6, scale: 2 }), // CMS work RVUs (e.g., 1.40)
+  procedureType: mysqlEnum("procedureType", ["imaging", "procedure", "visit"]).default("procedure"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type CptCode = typeof cptCodes.$inferSelect;
 export type InsertCptCode = typeof cptCodes.$inferInsert;
+
+/**
+ * Institutions table - stores home institutions for providers
+ */
+export const institutions = mysqlTable("institutions", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull().unique(),
+  shortName: varchar("shortName", { length: 50 }),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Institution = typeof institutions.$inferSelect;
+export type InsertInstitution = typeof institutions.$inferInsert;
+
+/**
+ * Providers table - stores physician/provider information
+ * Tracks provider type and home institution for revenue attribution
+ */
+export const providers = mysqlTable("providers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  providerType: mysqlEnum("providerType", ["Type1", "Type2", "Type3"]).notNull(),
+  homeInstitutionId: int("homeInstitutionId").notNull(),
+  active: boolean("active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Provider = typeof providers.$inferSelect;
+export type InsertProvider = typeof providers.$inferInsert;
 
 /**
  * Payers table - stores insurance payer information
@@ -134,6 +169,25 @@ export const scenarioDetails = mysqlTable("scenario_details", {
 
 export type ScenarioDetail = typeof scenarioDetails.$inferSelect;
 export type InsertScenarioDetail = typeof scenarioDetails.$inferInsert;
+
+/**
+ * Scenario provider activities table - tracks provider activities in scenarios
+ * For imaging: tracks both orders and reads
+ * For procedures/visits: tracks performs only
+ */
+export const scenarioProviderActivities = mysqlTable("scenario_provider_activities", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  providerId: int("providerId").notNull(),
+  cptCodeId: int("cptCodeId").notNull(),
+  monthlyOrdered: int("monthlyOrdered").default(0), // For imaging: how many ordered
+  monthlyRead: int("monthlyRead").default(0), // For imaging: how many read
+  monthlyPerformed: int("monthlyPerformed").default(0), // For procedures/visits: how many performed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ScenarioProviderActivity = typeof scenarioProviderActivities.$inferSelect;
+export type InsertScenarioProviderActivity = typeof scenarioProviderActivities.$inferInsert;
 
 /**
  * Calculation settings table - stores global multipliers for calculated rate mode

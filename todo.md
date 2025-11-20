@@ -125,3 +125,25 @@
 - [x] Update calculation logic to apply multipliers when rateMode is "calculated"
 - [x] Test calculated rates with various multiplier values
 - [x] Verify manual rates still work unchanged
+
+## Provider-Centric Modeling System
+- [x] Create institutions table for home institution tracking
+- [x] Create providers table (name, type, home institution)
+- [x] Add work_rvu column to cpt_codes table
+- [x] Add procedure_type column to cpt_codes table (imaging/procedure/visit)
+- [x] Create scenario_provider_activities table for tracking orders/reads/performs
+- [x] Build backend API for institutions CRUD
+- [x] Build backend API for providers CRUD
+- [x] Create Institutions management page in Admin Panel
+- [x] Create Providers management page in Admin Panel
+- [ ] Update CPT Codes form to include RVU and procedure type
+- [ ] Enhance Scenario Builder to add providers to scenarios
+- [ ] Add activity entry UI (ordered/read for imaging, performed for others)
+- [ ] Add validation: sum(ordered) = sum(read) per imaging CPT code
+- [ ] Update calculation engine for provider attribution
+- [ ] Track professional $ by home institution
+- [ ] Track RVUs by provider
+- [ ] Track technical $ to Mount Sinai West
+- [ ] Build provider-centric results view
+- [ ] Build institution-centric results view
+- [ ] Test Type 1, Type 2, and Type 3 provider scenarios

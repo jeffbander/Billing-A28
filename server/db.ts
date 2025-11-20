@@ -9,7 +9,10 @@ import {
   payerMultipliers, InsertPayerMultiplier, PayerMultiplier,
   scenarios, InsertScenario, Scenario,
   scenarioDetails, InsertScenarioDetail, ScenarioDetail,
-  calculationSettings, InsertCalculationSettings, CalculationSettings
+  calculationSettings, InsertCalculationSettings, CalculationSettings,
+  institutions, InsertInstitution, Institution,
+  providers, InsertProvider, Provider,
+  scenarioProviderActivities, InsertScenarioProviderActivity, ScenarioProviderActivity
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -482,5 +485,179 @@ export async function initializeCalculationSettings(): Promise<void> {
       commercialTechnicalMultiplier: 150, // 1.5x default
       medicaidTechnicalMultiplier: 80,    // 0.8x default
     });
+  }
+}
+
+// ===== Institution Management =====
+export async function getAllInstitutions(): Promise<Institution[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(institutions).orderBy(institutions.name);
+  } catch (error) {
+    console.error("[Database] Failed to get institutions:", error);
+    return [];
+  }
+}
+
+export async function getActiveInstitutions(): Promise<Institution[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(institutions)
+      .where(eq(institutions.active, true))
+      .orderBy(institutions.name);
+  } catch (error) {
+    console.error("[Database] Failed to get active institutions:", error);
+    return [];
+  }
+}
+
+export async function getInstitutionById(id: number): Promise<Institution | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.select().from(institutions).where(eq(institutions.id, id)).limit(1);
+    return result[0];
+  } catch (error) {
+    console.error("[Database] Failed to get institution:", error);
+    return undefined;
+  }
+}
+
+export async function createInstitution(institution: InsertInstitution): Promise<Institution | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.insert(institutions).values(institution);
+    const insertId = Number(result[0].insertId);
+    return await getInstitutionById(insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create institution:", error);
+    return undefined;
+  }
+}
+
+export async function updateInstitution(id: number, updates: Partial<InsertInstitution>): Promise<Institution | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    await db.update(institutions).set(updates).where(eq(institutions.id, id));
+    return await getInstitutionById(id);
+  } catch (error) {
+    console.error("[Database] Failed to update institution:", error);
+    return undefined;
+  }
+}
+
+export async function deleteInstitution(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(institutions).where(eq(institutions.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete institution:", error);
+    return false;
+  }
+}
+
+// ===== Provider Management =====
+export async function getAllProviders(): Promise<Provider[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(providers).orderBy(providers.name);
+  } catch (error) {
+    console.error("[Database] Failed to get providers:", error);
+    return [];
+  }
+}
+
+export async function getActiveProviders(): Promise<Provider[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(providers)
+      .where(eq(providers.active, true))
+      .orderBy(providers.name);
+  } catch (error) {
+    console.error("[Database] Failed to get active providers:", error);
+    return [];
+  }
+}
+
+export async function getProviderById(id: number): Promise<Provider | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.select().from(providers).where(eq(providers.id, id)).limit(1);
+    return result[0];
+  } catch (error) {
+    console.error("[Database] Failed to get provider:", error);
+    return undefined;
+  }
+}
+
+export async function getProvidersByInstitution(institutionId: number): Promise<Provider[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(providers)
+      .where(eq(providers.homeInstitutionId, institutionId))
+      .orderBy(providers.name);
+  } catch (error) {
+    console.error("[Database] Failed to get providers by institution:", error);
+    return [];
+  }
+}
+
+export async function createProvider(provider: InsertProvider): Promise<Provider | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.insert(providers).values(provider);
+    const insertId = Number(result[0].insertId);
+    return await getProviderById(insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create provider:", error);
+    return undefined;
+  }
+}
+
+export async function updateProvider(id: number, updates: Partial<InsertProvider>): Promise<Provider | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    await db.update(providers).set(updates).where(eq(providers.id, id));
+    return await getProviderById(id);
+  } catch (error) {
+    console.error("[Database] Failed to update provider:", error);
+    return undefined;
+  }
+}
+
+export async function deleteProvider(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(providers).where(eq(providers.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete provider:", error);
+    return false;
   }
 }
