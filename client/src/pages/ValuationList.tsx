@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Eye, MoreVertical, Trash2, GitCompare, Plus, Search } from "lucide-react";
+import { Eye, MoreVertical, Trash2, GitCompare, Plus, Search, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -261,6 +261,12 @@ export default function ValuationList() {
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/valuations/${valuation.id}/edit`)}
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {

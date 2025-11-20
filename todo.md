@@ -208,3 +208,16 @@
 - [x] Tested navigation from list to comparison with query params
 - [x] Tested comparison with 2 different providers (Dr. Bander vs Dr. Mehta)
 - [x] Verified calculations: +3.5 RVUs (+7.8%), +$88K Prof. Revenue (+33.0%)
+
+## Edit Valuation Feature
+- [x] Create EditValuation page component (/valuations/:id/edit)
+- [x] Pre-populate form with existing valuation data
+- [x] Pre-populate CPT activities with existing quantities
+- [x] Add getActivities backend endpoint for fetching activities
+- [x] Extend update backend endpoint to support updating activities
+- [x] Implement delete and re-create logic for activities
+- [x] Add "Edit" button to valuation list dropdown menu
+- [x] Add route for /valuations/:id/edit in App.tsx
+- [x] Test edit workflow: list → edit → save → view results (changed 50 to 60 performs)
+- [x] Verified calculations update correctly (58.20 RVUs, $426K revenue)
+- [x] Create comprehensive vitest tests for edit functionality (14 tests passing)

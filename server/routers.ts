@@ -880,6 +880,12 @@ export const appRouter = router({
         return await db.getValuationWithDetails(input.id);
       }),
     
+    getActivities: protectedProcedure
+      .input(z.object({ valuationId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getValuationActivitiesByValuation(input.valuationId);
+      }),
+    
     create: protectedProcedure
       .input(z.object({
         providerId: z.number(),
@@ -922,12 +928,39 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().max(200).optional(),
         description: z.string().optional(),
+        providerId: z.number().optional(),
         monthlyPatients: z.number().optional(),
+        activities: z.array(z.object({
+          cptCodeId: z.number(),
+          monthlyOrders: z.number().default(0),
+          monthlyReads: z.number().default(0),
+          monthlyPerforms: z.number().default(0),
+        })).optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...data } = input;
+        const { id, activities, ...data } = input;
+        
+        // Update valuation basic info
         await db.updateValuation(id, data);
-        return { success: true };
+        
+        // If activities provided, replace all activities
+        if (activities) {
+          // Delete existing activities
+          const existingActivities = await db.getValuationActivitiesByValuation(id);
+          for (const activity of existingActivities) {
+            await db.deleteValuationActivity(activity.id);
+          }
+          
+          // Create new activities
+          for (const activity of activities) {
+            await db.createValuationActivity({
+              valuationId: id,
+              ...activity,
+            });
+          }
+        }
+        
+        return { id, success: true };
       }),
     
     delete: protectedProcedure
