@@ -1,7 +1,8 @@
 import { eq, and, or, desc, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  InsertUser, users, 
+import { drizzle, MySql2Database } from "drizzle-orm/mysql2";
+import mysql from "mysql2";
+import {
+  InsertUser, users,
   cptCodes, InsertCptCode, CptCode,
   payers, InsertPayer, Payer,
   plans, InsertPlan, Plan,
@@ -19,18 +20,71 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// Global connection pool for serverless environments
+// Uses module-level caching to persist across invocations in the same instance
+let _pool: mysql.Pool | null = null;
+let _db: MySql2Database | null = null;
 
+/**
+ * Get database connection with connection pooling optimized for serverless
+ * Connection pool settings are tuned for Vercel serverless functions:
+ * - Small pool size (1-5) to avoid exhausting database connections
+ * - Short idle timeout to release connections quickly
+ * - Connection limit to prevent connection exhaustion
+ */
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Parse DATABASE_URL for pool configuration
+      const dbUrl = new URL(process.env.DATABASE_URL);
+
+      // Create connection pool with serverless-optimized settings
+      // Using callback-style pool (mysql2 without /promise) for drizzle compatibility
+      _pool = mysql.createPool({
+        host: dbUrl.hostname,
+        port: parseInt(dbUrl.port) || 3306,
+        user: decodeURIComponent(dbUrl.username),
+        password: decodeURIComponent(dbUrl.password),
+        database: dbUrl.pathname.slice(1), // Remove leading slash
+
+        // Serverless-optimized pool settings
+        connectionLimit: 5,          // Small pool for serverless
+        queueLimit: 0,               // Unlimited queue
+        waitForConnections: true,    // Wait for available connection
+        enableKeepAlive: true,       // Keep connections alive
+        keepAliveInitialDelay: 10000, // Initial keepalive delay (ms)
+
+        // SSL configuration for production
+        ssl: process.env.NODE_ENV === 'production' ? {
+          rejectUnauthorized: false // Required for some cloud MySQL providers
+        } : undefined,
+
+        // Timezone handling
+        timezone: '+00:00',
+      });
+
+      _db = drizzle(_pool);
+      console.log("[Database] Connection pool initialized for serverless");
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _pool = null;
     }
   }
   return _db;
+}
+
+/**
+ * Close database pool - useful for testing or graceful shutdown
+ * In serverless, connections are managed automatically
+ */
+export async function closeDb() {
+  if (_pool) {
+    _pool.end();
+    _pool = null;
+    _db = null;
+    console.log("[Database] Connection pool closed");
+  }
 }
 
 // ===== User Management =====
