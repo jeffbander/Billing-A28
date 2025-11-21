@@ -366,3 +366,9 @@
 - [x] Test with 2 echo scenario (CONFIRMED: now shows $144 prof, $1,296 tech - correct!)
 - [x] Verify fix applies to all CPT codes and all site types (conversion applied to all rate calculations)
 - [ ] Save checkpoint with bug fix
+
+## Sidebar Navigation Update
+- [x] Add Provider Valuations link to sidebar menu
+- [x] Position between Scenarios and Admin Panel (with Activity icon)
+- [x] Test navigation from sidebar to valuations list (confirmed working - navigates to /valuations)
+- [x] Save checkpoint

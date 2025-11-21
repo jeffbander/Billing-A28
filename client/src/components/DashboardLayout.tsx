@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Database, Calculator, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Database, Calculator, Shield, Activity } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -34,6 +34,7 @@ const menuItems = [
   { icon: Database, label: "Manage Rates", path: "/rates" },
   { icon: Users, label: "Manage Payers", path: "/payers" },
   { icon: Calculator, label: "Scenarios", path: "/scenarios" },
+  { icon: Activity, label: "Provider Valuations", path: "/valuations" },
   { icon: Shield, label: "Admin Panel", path: "/admin", requiresAuth: true },
 ];
 
