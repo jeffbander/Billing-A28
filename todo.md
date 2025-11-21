@@ -259,3 +259,46 @@
 - [x] Test analytics calculations with multiple valuations (verified all metrics correct)
 - [x] Create comprehensive vitest tests for analytics aggregation (9 tests passing)
 - [x] All 62 valuation tests passing across 5 test files
+
+## Revenue Attribution Model Refactor
+
+### Database Schema Updates
+- [x] Create sites table (id, name, siteType: FPA/Article28, institutionId)
+- [x] Add siteId to providers table (primary site)
+- [x] Add institutionId and siteId to valuations table (optional for backward compatibility)
+- [ ] Update valuation_activities: split monthlyPerforms into monthlyOrders and monthlyReads
+- [ ] Add payerMix JSON field to valuations (placeholder for future)
+- [ ] Run database migration (pnpm db:push)
+
+### Calculation Engine Updates
+- [ ] Implement earned vs attributed revenue logic
+- [ ] Earned Prof Revenue & RVUs → reader's home institution
+- [ ] Attributed Prof Revenue & RVUs → ordering MD (tracking)
+- [ ] Earned Tech Revenue → site (actual)
+- [ ] Attributed Tech Revenue → ordering MD (tracking)
+- [ ] Handle Article 28 sites (prof + tech split)
+- [ ] Handle FPA sites (global rate)
+- [ ] Use Medicare rates from rates table
+
+### UI Updates - Valuation Creation
+- [ ] Add institution selector
+- [ ] Add site selector (filtered by institution)
+- [ ] Update CPT activity inputs: separate Orders and Reads fields
+- [ ] Update form validation for new fields
+
+### UI Updates - Results Display
+- [ ] Show earned vs attributed breakdown
+- [ ] Display earned prof revenue & RVUs by provider home institution
+- [ ] Display attributed prof revenue & RVUs by ordering MD
+- [ ] Display earned tech revenue by site
+- [ ] Display attributed tech revenue by ordering MD
+- [ ] Update activity breakdown table with orders/reads columns
+
+### Testing
+- [ ] Test Type 1 MD scenario (own institution)
+- [ ] Test Type 2 MD scenario (different institution)
+- [ ] Test Type 3 MD scenario (orders only)
+- [ ] Test Article 28 site calculations
+- [ ] Test FPA site calculations
+- [ ] Create comprehensive vitest tests for new logic
+- [ ] Verify all revenue attribution flows correctly

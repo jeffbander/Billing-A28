@@ -50,14 +50,33 @@ export type Institution = typeof institutions.$inferSelect;
 export type InsertInstitution = typeof institutions.$inferInsert;
 
 /**
+ * Sites table - stores physical sites where care is delivered
+ * Each site belongs to an institution and has a site type (Article 28 or FPA)
+ */
+export const sites = mysqlTable("sites", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  siteType: mysqlEnum("siteType", ["Article28", "FPA"]).notNull(),
+  institutionId: int("institutionId").notNull(),
+  active: boolean("active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Site = typeof sites.$inferSelect;
+export type InsertSite = typeof sites.$inferInsert;
+
+/**
  * Providers table - stores physician/provider information
- * Tracks provider type and home institution for revenue attribution
+ * Tracks provider type, home institution, and primary site for revenue attribution
  */
 export const providers = mysqlTable("providers", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
   providerType: mysqlEnum("providerType", ["Type1", "Type2", "Type3"]).notNull(),
   homeInstitutionId: int("homeInstitutionId").notNull(),
+  primarySiteId: int("primarySiteId"),
   active: boolean("active").default(true).notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -210,9 +229,12 @@ export const valuations = mysqlTable("valuations", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   providerId: int("providerId").notNull(),
+  institutionId: int("institutionId"), // Institution being evaluated (optional for backward compatibility)
+  siteId: int("siteId"), // Site being evaluated (optional for backward compatibility)
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
   monthlyPatients: int("monthlyPatients").default(0),
+  payerMix: text("payerMix"), // JSON field for future payer mix percentages
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
