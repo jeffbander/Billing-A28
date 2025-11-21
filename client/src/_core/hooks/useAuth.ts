@@ -1,6 +1,5 @@
-import { getLoginUrl } from "@/const";
+import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
 import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -9,15 +8,22 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
+  const { redirectOnUnauthenticated = false, redirectPath = "/auth" } =
     options ?? {};
+
+  const { isLoaded: clerkLoaded, isSignedIn, signOut } = useClerkAuth();
+  const { user: clerkUser } = useUser();
   const utils = trpc.useUtils();
 
+  // Fetch user from our database (synced from Clerk)
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    // Only fetch if Clerk says we're signed in
+    enabled: clerkLoaded && isSignedIn,
   });
 
+  // Legacy logout mutation (for API compatibility)
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
@@ -26,33 +32,45 @@ export function useAuth(options?: UseAuthOptions) {
 
   const logout = useCallback(async () => {
     try {
+      // Sign out from Clerk first
+      await signOut();
+      // Also call the legacy logout mutation for cleanup
       await logoutMutation.mutateAsync();
     } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        return;
-      }
-      throw error;
+      // Ignore errors during logout
+      console.error("[Auth] Logout error:", error);
     } finally {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
+      // Clear any local storage
+      localStorage.removeItem("manus-runtime-user-info");
     }
-  }, [logoutMutation, utils]);
+  }, [signOut, logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    // Loading state: either Clerk is loading or we're fetching user data
+    const loading = !clerkLoaded || (isSignedIn && meQuery.isLoading) || logoutMutation.isPending;
+
+    // User from our database
+    const user = meQuery.data ?? null;
+
+    // Store in localStorage for backwards compatibility
+    if (user) {
+      localStorage.setItem("manus-runtime-user-info", JSON.stringify(user));
+    }
+
     return {
-      user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
+      user,
+      loading,
       error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      isAuthenticated: Boolean(isSignedIn && user),
+      // Expose Clerk user for additional info if needed
+      clerkUser,
     };
   }, [
+    clerkLoaded,
+    isSignedIn,
+    clerkUser,
     meQuery.data,
     meQuery.error,
     meQuery.isLoading,
@@ -62,15 +80,21 @@ export function useAuth(options?: UseAuthOptions) {
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
+    if (!clerkLoaded) return; // Wait for Clerk to load
     if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user) return;
+    if (state.user || isSignedIn === undefined) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    // Only redirect if Clerk confirms we're not signed in
+    if (!isSignedIn) {
+      window.location.href = redirectPath;
+    }
   }, [
     redirectOnUnauthenticated,
     redirectPath,
+    clerkLoaded,
+    isSignedIn,
     logoutMutation.isPending,
     meQuery.isLoading,
     state.user,

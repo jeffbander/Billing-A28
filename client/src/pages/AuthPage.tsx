@@ -1,8 +1,20 @@
+import { SignIn, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
+import { APP_LOGO, APP_TITLE } from "@/const";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function AuthPage() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect to dashboard if already signed in
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setLocation("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, setLocation]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-blue-50">
@@ -17,16 +29,27 @@ export default function AuthPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button 
-            className="w-full" 
-            size="lg"
-            asChild
-          >
-            <a href={getLoginUrl()}>
-              Sign In with Manus
-            </a>
-          </Button>
-          
+          {/* Clerk SignIn Component */}
+          <div className="flex justify-center">
+            <SignIn
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  card: "shadow-none border-0 p-0",
+                  headerTitle: "hidden",
+                  headerSubtitle: "hidden",
+                  socialButtonsBlockButton: "w-full",
+                  formButtonPrimary: "bg-primary hover:bg-primary/90",
+                  footerAction: "hidden",
+                },
+              }}
+              routing="hash"
+              signUpUrl="/auth"
+              afterSignInUrl="/dashboard"
+              redirectUrl="/dashboard"
+            />
+          </div>
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -36,9 +59,9 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Button 
-            variant="outline" 
-            className="w-full" 
+          <Button
+            variant="outline"
+            className="w-full"
             size="lg"
             asChild
           >
