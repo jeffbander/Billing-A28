@@ -16,6 +16,7 @@ import GuestRedirect from "./pages/GuestRedirect";
 import ManageInstitutions from "./pages/ManageInstitutions";
 import ManageProviders from "./pages/ManageProviders";
 import ManageSites from "./pages/ManageSites";
+import TestScenarios from "./pages/TestScenarios";
 import ValuationBuilder from "./pages/ValuationBuilder";
 import ValuationResults from "./pages/ValuationResults";
 import ValuationList from "./pages/ValuationList";
@@ -46,7 +47,8 @@ function Router() {
       <Route path={"/valuations/:id"} component={ValuationResults} />
       <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/admin/institutions"} component={ManageInstitutions} />
-      <Route path={"/admin/sites"} component={ManageSites} />
+      <Route path="/admin/sites" component={ManageSites} />
+      <Route path="/admin/test-scenarios" component={TestScenarios} />
       <Route path={"/admin/providers"} component={ManageProviders} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

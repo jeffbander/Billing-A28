@@ -333,3 +333,27 @@
 - [ ] Fix remaining calculation tests (result structure validation)
 - [ ] Test Type 1, Type 2, Type 3 provider scenarios with real data
 - [x] Save checkpoint with Phase 4-7 revenue attribution system implementation
+
+## Test Scenario Generator Feature
+
+### Backend API
+- [ ] Create test scenario templates (Type 1, Type 2, Type 3 provider examples)
+- [ ] Add generateTestValuation endpoint with realistic activity data
+- [ ] Add compareValuations endpoint for side-by-side comparison
+- [ ] Include preset activity mixes (imaging-heavy, visit-heavy, mixed)
+
+### Frontend UI
+- [ ] Create TestScenarios page in Admin Panel
+- [ ] Add quick generation buttons for each provider type
+- [ ] Display generated valuation results in cards
+- [ ] Add side-by-side comparison view
+- [ ] Show earned vs attributed breakdown clearly
+- [ ] Add export/clear test data controls
+
+### Test Data Templates
+- [ ] Type 1 template: Provider at own institution (MSM Cardiology at MSM)
+- [ ] Type 2 template: Visiting provider (MSM provider at MSW site)
+- [ ] Type 3 template: Ordering-only provider (no reads)
+- [ ] FPA site scenario with mixed activities
+- [ ] Article 28 site scenario with prof/tech split
+- [ ] Realistic activity volumes (20-100 orders/reads per code)

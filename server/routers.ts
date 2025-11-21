@@ -915,6 +915,134 @@ export const appRouter = router({
         const success = await db.deleteSite(input.id);
         return { success };
       }),
+
+    // Test Scenario Generation
+    generateTestScenario: adminProcedure
+      .input(z.object({
+        scenarioType: z.enum(["type1_fpa", "type1_article28", "type2_visiting", "type3_ordering", "imaging_heavy", "visit_heavy"]),
+        providerId: z.number().optional(),
+        institutionId: z.number().optional(),
+        siteId: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Get first available provider, institution, and site if not specified
+        let providerId = input.providerId;
+        let institutionId = input.institutionId;
+        let siteId = input.siteId;
+
+        if (!providerId) {
+          const providers = await db.getActiveProviders();
+          if (providers.length === 0) throw new TRPCError({ code: 'NOT_FOUND', message: 'No providers available' });
+          providerId = providers[0].id;
+        }
+
+        if (!institutionId) {
+          const institutions = await db.getActiveInstitutions();
+          if (institutions.length === 0) throw new TRPCError({ code: 'NOT_FOUND', message: 'No institutions available' });
+          institutionId = institutions[0].id;
+        }
+
+        if (!siteId) {
+          const sites = await db.getActiveSites();
+          if (sites.length === 0) throw new TRPCError({ code: 'NOT_FOUND', message: 'No sites available' });
+          siteId = sites[0].id;
+        }
+
+        const provider = await db.getProviderById(providerId);
+        const site = await db.getSiteById(siteId);
+        if (!provider || !site) throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider or site not found' });
+
+        // Define test scenario templates
+        const scenarioTemplates: Record<string, { name: string; activities: Array<{ cptCodeId: number; orders: number; reads: number }> }> = {
+          type1_fpa: {
+            name: `Test: ${provider.name} - Type 1 FPA (Own Institution)`,
+            activities: [
+              { cptCodeId: 2, orders: 40, reads: 40 }, // 93306 Echocardiography
+              { cptCodeId: 3, orders: 25, reads: 25 }, // 93351 Stress Echo
+              { cptCodeId: 5, orders: 150, reads: 0 }, // 99213 Office Visit
+              { cptCodeId: 6, orders: 80, reads: 0 },  // 99214 Office Visit
+            ],
+          },
+          type1_article28: {
+            name: `Test: ${provider.name} - Type 1 Article 28`,
+            activities: [
+              { cptCodeId: 2, orders: 50, reads: 50 }, // 93306
+              { cptCodeId: 1, orders: 30, reads: 30 }, // 78452 Nuclear
+              { cptCodeId: 4, orders: 100, reads: 0 }, // 99203 New Patient
+            ],
+          },
+          type2_visiting: {
+            name: `Test: ${provider.name} - Type 2 Visiting Provider`,
+            activities: [
+              { cptCodeId: 2, orders: 20, reads: 60 }, // More reads than orders (reading for others)
+              { cptCodeId: 3, orders: 10, reads: 30 },
+              { cptCodeId: 5, orders: 50, reads: 0 },
+            ],
+          },
+          type3_ordering: {
+            name: `Test: ${provider.name} - Type 3 Ordering Only`,
+            activities: [
+              { cptCodeId: 2, orders: 80, reads: 0 }, // Orders only, no reads
+              { cptCodeId: 3, orders: 40, reads: 0 },
+              { cptCodeId: 1, orders: 20, reads: 0 },
+              { cptCodeId: 5, orders: 200, reads: 0 }, // High visit volume
+              { cptCodeId: 6, orders: 120, reads: 0 },
+            ],
+          },
+          imaging_heavy: {
+            name: `Test: ${provider.name} - Imaging Heavy Practice`,
+            activities: [
+              { cptCodeId: 2, orders: 100, reads: 100 },
+              { cptCodeId: 3, orders: 60, reads: 60 },
+              { cptCodeId: 1, orders: 40, reads: 40 },
+              { cptCodeId: 5, orders: 50, reads: 0 },
+            ],
+          },
+          visit_heavy: {
+            name: `Test: ${provider.name} - Visit Heavy Practice`,
+            activities: [
+              { cptCodeId: 4, orders: 150, reads: 0 }, // 99203
+              { cptCodeId: 5, orders: 300, reads: 0 }, // 99213
+              { cptCodeId: 6, orders: 200, reads: 0 }, // 99214
+              { cptCodeId: 7, orders: 100, reads: 0 }, // 99215
+              { cptCodeId: 2, orders: 20, reads: 20 }, // Minimal imaging
+            ],
+          },
+        };
+
+        const template = scenarioTemplates[input.scenarioType];
+        if (!template) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid scenario type' });
+
+        // Create valuation
+        const valuation = await db.createValuation({
+          userId: ctx.user.id,
+          name: template.name,
+          providerId,
+          institutionId,
+          siteId,
+          monthlyPatients: 100,
+        });
+
+        if (!valuation) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create valuation' });
+
+        // Create activities
+        for (const activity of template.activities) {
+          await db.createValuationActivity({
+            valuationId: valuation.id,
+            cptCodeId: activity.cptCodeId,
+            monthlyOrders: activity.orders,
+            monthlyReads: activity.reads,
+            monthlyPerforms: activity.reads > 0 ? activity.reads : activity.orders, // Backward compatibility
+          });
+        }
+
+        return {
+          valuation,
+          scenarioType: input.scenarioType,
+          provider,
+          site,
+        };
+      }),
   }),
 
   // Valuation Management

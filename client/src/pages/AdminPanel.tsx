@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Shield, ShieldOff, Calculator, Building2, UserCircle, MapPin } from "lucide-react";
+import { Shield, ShieldOff, Calculator, Building2, UserCircle, MapPin, Beaker } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -133,6 +133,18 @@ export default function AdminPanel() {
               </CardTitle>
               <CardDescription>
                 Manage physician profiles and provider types
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/admin/test-scenarios'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Beaker className="h-5 w-5" />
+                Test Scenarios
+              </CardTitle>
+              <CardDescription>
+                Generate realistic test data for validation
               </CardDescription>
             </CardHeader>
           </Card>
