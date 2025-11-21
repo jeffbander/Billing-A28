@@ -1,286 +1,320 @@
-# Vercel Deployment Guide
+# Vercel Serverless Deployment Guide
 
-This guide covers deploying the Provider Reimbursement Tool to Vercel with serverless architecture.
+## Current Architecture Analysis
 
-## Architecture Overview
+Your application is currently built as a traditional monolith:
+1. Express server bundles the entire app
+2. Vite builds frontend to `dist/public/`
+3. esbuild bundles server to `dist/index.js`
+4. Single entry point serves both API and static files
 
-### Before (Express Server)
-```
-┌─────────────────────────────────────────────────┐
-│ Express Server (Long-running)                   │
-│  ├── tRPC API (/api/trpc)                       │
-│  ├── OAuth callback (/api/oauth/callback)       │
-│  └── Static file serving                        │
-└─────────────────────────────────────────────────┘
-```
+## Challenges for Vercel Serverless
 
-### After (Vercel Serverless)
-```
-┌─────────────────────────────────────────────────┐
-│ Vercel Edge Network (CDN)                       │
-│  └── Static assets (React app)                  │
-├─────────────────────────────────────────────────┤
-│ Serverless Functions                            │
-│  ├── /api/trpc/[trpc].ts (tRPC handler)         │
-│  ├── /api/oauth/callback.ts (OAuth)             │
-│  ├── /api/auth/logout.ts (Session logout)       │
-│  └── /api/health.ts (Health check)              │
-└─────────────────────────────────────────────────┘
-```
+### Issue 1: Port Detection
+Your server auto-discovers ports 3000-3020. Vercel Functions don't expose ports.
 
-## Prerequisites
-
-1. **Vercel Account**: Sign up at [vercel.com](https://vercel.com)
-2. **MySQL Database**: External MySQL database accessible from the internet
-   - Recommended: PlanetScale, Railway, or AWS RDS
-3. **OAuth Configuration**: OAuth server URL and credentials
-
-## Environment Variables
-
-Configure these in your Vercel project settings:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | MySQL connection string | `mysql://user:pass@host:3306/db` |
-| `JWT_SECRET` | Secret for signing JWT tokens | `your-secure-random-string-at-least-32-chars` |
-| `VITE_APP_ID` | Application ID for OAuth | `your-app-id` |
-| `OAUTH_SERVER_URL` | OAuth server endpoint | `https://oauth.example.com` |
-| `OWNER_OPEN_ID` | Admin user's OpenID | `admin-open-id` |
-| `NODE_ENV` | Environment mode | `production` |
-
-### Setting Environment Variables in Vercel
-
-1. Go to your project in Vercel Dashboard
-2. Navigate to **Settings** > **Environment Variables**
-3. Add each variable above
-4. For sensitive values, use Vercel Secrets:
-   ```bash
-   vercel secrets add database_url "mysql://..."
-   vercel secrets add jwt_secret "your-secret"
-   ```
-
-## Deployment Steps
-
-### Option A: Deploy via Vercel CLI
-
-1. **Install Vercel CLI**:
-   ```bash
-   npm install -g vercel
-   ```
-
-2. **Login to Vercel**:
-   ```bash
-   vercel login
-   ```
-
-3. **Deploy**:
-   ```bash
-   cd /path/to/project
-   vercel deploy --prod
-   ```
-
-### Option B: Deploy via GitHub Integration
-
-1. Push code to GitHub repository
-2. Connect repository in Vercel Dashboard
-3. Configure build settings:
-   - **Build Command**: `npm run build:vercel`
-   - **Output Directory**: `dist/public`
-   - **Install Command**: `npm install`
-
-4. Deploy automatically on push
-
-### Option C: Manual Deployment
-
-1. **Build locally**:
-   ```bash
-   npm run build:vercel
-   ```
-
-2. **Deploy build output**:
-   ```bash
-   vercel deploy --prod
-   ```
-
-## Database Configuration
-
-### Connection Pooling for Serverless
-
-The application is configured with serverless-optimized connection pooling:
-
+**Current Code (server/_core/index.ts):**
 ```typescript
-// server/db.ts
-mysql.createPool({
-  connectionLimit: 5,      // Small pool for serverless
-  maxIdle: 5,              // Max idle connections
-  idleTimeout: 30000,      // 30 second idle timeout
-  enableKeepAlive: true,   // Keep connections alive
-});
+const preferredPort = parseInt(process.env.PORT || "3000");
+const port = await findAvailablePort(preferredPort);
+server.listen(port, () => { ... });
 ```
 
-### Recommended Database Providers
+**Vercel Functions:** No `listen()` - they export a handler function instead.
 
-| Provider | Pros | Cons |
-|----------|------|------|
-| **PlanetScale** | Serverless-native, auto-scaling | MySQL compatible only |
-| **Railway** | Easy setup, good free tier | Limited regions |
-| **AWS RDS** | Full-featured, reliable | Requires VPC config |
-| **Supabase** | PostgreSQL with MySQL support | May need schema changes |
+### Issue 2: Static File Serving
+Your server serves static files from `dist/public/`. Vercel can handle this better with:
+- Edge functions for dynamic routing
+- Static file serving via CDN
 
-### PlanetScale Setup (Recommended)
-
-1. Create account at [planetscale.com](https://planetscale.com)
-2. Create a new database
-3. Get connection string from **Connect** > **Connect with** > **Node.js**
-4. Use the connection string as `DATABASE_URL`
-
-**Note**: PlanetScale connection strings use `?ssl={"rejectUnauthorized":true}`. The app handles SSL automatically.
-
-## API Routes
-
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/api/trpc/*` | GET/POST | tRPC API endpoints |
-| `/api/oauth/callback` | GET | OAuth callback handler |
-| `/api/auth/logout` | POST | Clear session cookie |
-| `/api/health` | GET | Health check endpoint |
-
-## Client Configuration
-
-For Vercel deployment, update the tRPC client base URL if needed:
-
+**Current pattern:**
 ```typescript
-// client/src/lib/trpc.ts
-export const trpc = createTRPCReact<AppRouter>();
-
-// The base URL is automatically detected from window.location
-```
-
-## Limitations & Considerations
-
-### Serverless Cold Starts
-- First request after inactivity may take 1-3 seconds
-- Database connections are pooled but may need re-establishment
-- Consider using Vercel's Edge Functions for latency-critical endpoints
-
-### Function Timeout
-- Default: 10 seconds (Hobby), 60 seconds (Pro)
-- Current config: 30 seconds max
-- Long-running operations may need chunking
-
-### Memory Limits
-- Hobby: 1024 MB
-- Pro: 3008 MB
-- Complex calculations should be optimized
-
-### Session Storage
-- In-memory session storage is not persistent across function invocations
-- Guest sessions may be lost on cold starts
-- Consider using external session store (Redis) for production
-
-### File Uploads
-- Max request body: 4.5 MB (free), 50 MB (pro)
-- For larger files, use direct S3 uploads
-
-## Monitoring & Debugging
-
-### Health Check
-```bash
-curl https://your-app.vercel.app/api/health
-```
-
-Expected response:
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "database": "connected",
-  "latency": "50ms"
+if (process.env.NODE_ENV === "development") {
+  await setupVite(app, server);
+} else {
+  serveStatic(app);  // Express.static
 }
 ```
 
-### Vercel Logs
-1. Go to Vercel Dashboard
-2. Select your project
-3. Navigate to **Deployments** > select deployment > **Functions**
-4. View real-time logs
+**Vercel Pattern:** Deploy frontend separately, API runs as serverless function.
 
-### Error Tracking
-Consider integrating:
-- Sentry for error tracking
-- Vercel Analytics for performance metrics
+### Issue 3: Vite Dev Server
+Your production build still includes Vite dev server setup. This adds ~5MB to bundle.
 
-## Cost Estimation
+### Issue 4: Database Connections
+MySQL connections from Vercel Functions need pooling. Each function invocation should reuse connections.
 
-### Vercel Hobby (Free)
-- 100 GB bandwidth
-- 100,000 serverless function invocations
-- Suitable for development/testing
+**Current Issue:** Each Express app instance creates new DB connection via `getDb()`.
 
-### Vercel Pro ($20/month)
-- 1 TB bandwidth
-- 1,000,000 serverless function invocations
-- Custom domains
-- Advanced analytics
+## Migration Strategy: Three Options
 
-### Database Costs
-- PlanetScale: Free tier (1 billion row reads/month)
-- Railway: $5/month for hobby
-- AWS RDS: ~$15/month for t3.micro
+### Option A: Traditional Node.js Hosting (Easiest)
+Deploy to Vercel as Node.js application (doesn't use serverless).
 
-## Troubleshooting
+**Changes needed:** Minimal
+- Add `vercel.json`
+- Set environment variables in Vercel UI
+- Done!
 
-### Common Issues
-
-**1. Database Connection Errors**
-- Verify DATABASE_URL format
-- Check database allows connections from Vercel IPs
-- Ensure SSL is properly configured
-
-**2. OAuth Callback Failures**
-- Verify OAUTH_SERVER_URL is correct
-- Check redirect URI is whitelisted
-- Ensure cookies are being set correctly
-
-**3. tRPC 404 Errors**
-- Verify vercel.json rewrites are correct
-- Check API function is exported as default
-- Ensure function runtime is compatible
-
-**4. Cold Start Timeouts**
-- Increase function maxDuration in vercel.json
-- Optimize database connection initialization
-- Consider Edge Functions for critical paths
-
-### Debug Mode
-
-Enable debug logging by setting:
-```
-VERCEL_DEBUG=1
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
+}
 ```
 
-## Migration Checklist
+**Pros:** 
+- Minimal code changes
+- Keeps current Express structure
+- Full control over ports
 
-- [ ] Set up external MySQL database
-- [ ] Configure all environment variables in Vercel
-- [ ] Test OAuth flow in production
-- [ ] Verify database connectivity
-- [ ] Test all tRPC endpoints
-- [ ] Check guest session handling
-- [ ] Monitor cold start performance
-- [ ] Set up error tracking
-- [ ] Configure custom domain (optional)
-- [ ] Enable SSL/HTTPS (automatic with Vercel)
+**Cons:**
+- Uses reserved instances (costs more)
+- Not true serverless
 
-## Rollback Procedure
+### Option B: Serverless with Manual Conversion (Medium Effort)
+Create Vercel Functions for API, separate frontend deployment.
 
-If deployment fails:
-1. Go to Vercel Dashboard > Deployments
-2. Find the last working deployment
-3. Click **...** > **Promote to Production**
+**Steps:**
+1. Keep Express as-is but export handler for Vercel
+2. Move static files to `public/` directory
+3. Create `api/` directory with catch-all route
 
-## Support
+**New structure:**
+```
+api/
+├── trpc/[...].ts        # tRPC handler
+└── oauth/
+    └── callback.ts      # OAuth callback
 
-- Vercel Documentation: [vercel.com/docs](https://vercel.com/docs)
-- tRPC Documentation: [trpc.io/docs](https://trpc.io/docs)
-- Drizzle ORM: [orm.drizzle.team](https://orm.drizzle.team)
+public/                  # Frontend dist files
+├── index.html
+├── assets/
+└── ...
+
+vercel.json             # Config
+```
+
+**Implementation:**
+```typescript
+// api/trpc/[...].ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import express from 'express';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { appRouter } from '../../server/routers';
+import { createContext } from '../../server/_core/context';
+
+const app = express();
+app.use(express.json());
+app.use(
+  "/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
+
+export default app;
+```
+
+**Pros:**
+- True serverless
+- Lower costs
+- Better scaling
+
+**Cons:**
+- Moderate refactoring
+- Cold start times
+
+### Option C: Full Serverless Refactor (Hard)
+Break apart Express and use Vercel's native patterns.
+
+- No Express at all
+- Each endpoint is separate function
+- No session storage in-memory
+- Use external session store (Redis)
+
+**Not recommended** for your scale/timeline.
+
+## Recommended: Option A (Traditional Node.js)
+
+### Steps:
+
+1. **Create `vercel.json`:**
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install --frozen-lockfile",
+  "devCommand": "npm run dev",
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
+```
+
+2. **Update `package.json` build:**
+```json
+{
+  "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"
+}
+```
+
+3. **Ensure entry point works:**
+- `dist/index.js` is the Vercel entry point
+- Current code works as-is!
+
+4. **Environment Variables in Vercel Dashboard:**
+```
+DATABASE_URL=mysql://user:pass@host/db
+JWT_SECRET=your-secret-key
+OAUTH_SERVER_URL=https://oauth.provider.com
+VITE_APP_ID=your-app-id
+OWNER_OPEN_ID=your-owner-id
+NODE_ENV=production
+```
+
+5. **Deploy:**
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
+## Database Connection Pooling (Important!)
+
+Your current connection pattern creates new connection per request:
+```typescript
+let _db: ReturnType<typeof drizzle> | null = null;
+
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    try {
+      _db = drizzle(process.env.DATABASE_URL);
+    } catch (error) {
+      _db = null;
+    }
+  }
+  return _db;
+}
+```
+
+**For Vercel + Traditional Node, this is fine** - same process per instance.
+
+But if using serverless later, you'd need:
+```typescript
+import { createPool } from 'mysql2/promise';
+
+const pool = createPool({
+  connectionLimit: 5,  // Lower for serverless
+  uri: process.env.DATABASE_URL,
+});
+
+// Reuse pool across invocations
+```
+
+## Expected File Changes
+
+**Files that need NO changes:**
+- `/server/_core/index.ts` - Works as-is
+- `/server/routers.ts` - No changes
+- `/server/db.ts` - Works with connection reuse
+- All client code - No changes
+
+**Files that need update:**
+- `vercel.json` - Create new file
+- `.gitignore` - Already has dist/
+
+**No code refactoring required!**
+
+## Deployment Checklist
+
+- [ ] Create `vercel.json`
+- [ ] Verify build works locally: `npm run build`
+- [ ] Test production locally: `NODE_ENV=production npm start`
+- [ ] Add all env vars in Vercel dashboard
+- [ ] Test OAuth URLs work from Vercel domain
+- [ ] Test database connections from Vercel region
+- [ ] Monitor initial deployment for errors
+- [ ] Test all major features after deploy
+
+## Database Region Considerations
+
+**Current:** Local or single host
+
+**Vercel:** Runs in US/EU/APAC regions
+
+**Solution:** Use DBaaS with global regions:
+- PlanetScale (MySQL-compatible)
+- Supabase (PostgreSQL)
+- Railway (MySQL)
+
+These provide:
+- Connection pooling
+- Regional redundancy
+- Automatic backups
+- Pay-per-use pricing
+
+## Cost Estimates
+
+**Option A (Traditional Node):**
+- Reserved Instance: $7-40/month depending on size
+- Database: $10-100+/month
+- Static files: Free (served from instance)
+- Total: $17-140/month
+
+**Option B (Serverless with separate frontend):**
+- Functions: $0.50 per 1M requests + compute time
+- Database: $10-100+/month
+- Frontend CDN: Free (Vercel CDN included)
+- Total: $10-150/month (depends on usage)
+
+For healthcare billing app with moderate traffic, **Option A is more predictable**.
+
+## Security Considerations
+
+When deploying:
+1. Database password in CONNECTION_STRING only
+2. JWT_SECRET: Use 32+ char random string
+3. CORS: Client-side fetch already sets `credentials: include`
+4. Cookie: HttpOnly set automatically by Express
+5. HTTPS: Vercel enforces for all domains
+
+## Monitoring & Debugging
+
+**After deployment:**
+
+1. Check logs:
+```bash
+vercel logs -f          # Follow logs
+```
+
+2. Monitor database:
+- Connection count
+- Query performance
+- Long-running transactions
+
+3. Test critical paths:
+- OAuth login
+- Rate calculation
+- Database queries
+
+## Timeline
+
+- **Option A setup:** 30 minutes
+- **Testing:** 1-2 hours
+- **Deployment:** 10 minutes
+- **Total:** 2-3 hours
+
+## Post-Deployment
+
+1. Monitor for 24 hours
+2. Test from different regions
+3. Monitor database connection pool
+4. Set up error tracking (Sentry, etc.)
+5. Monitor costs
+
+---
+
+**Next Step:** Create `vercel.json` and test local build, then deploy to Vercel!

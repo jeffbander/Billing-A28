@@ -1,0 +1,469 @@
+================================================================================
+  HEALTHCARE BILLING APPLICATION - ARCHITECTURE DIAGRAM
+================================================================================
+
+CLIENT SIDE (Browser)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  React App (React 19.1.1)                                              │
+│  ├─ Router (wouter)                                                     │
+│  │  └─ 23 Page Components                                              │
+│  │     ├─ Home, Auth, Dashboard                                        │
+│  │     ├─ RatesManagement, PayersManagement                            │
+│  │     ├─ ScenarioBuilder, ScenarioResults                             │
+│  │     ├─ ValuationBuilder, ValuationList, EditValuation               │
+│  │     ├─ ValuationResults, ValuationComparison, ValuationAnalytics    │
+│  │     ├─ AdminPanel, ManageInstitutions, ManageProviders, ManageSites │
+│  │     └─ BulkEditValuations, TestScenarios                            │
+│  │                                                                       │
+│  ├─ Components                                                           │
+│  │  └─ Radix UI + Tailwind CSS (responsive UI)                         │
+│  │                                                                       │
+│  ├─ State Management                                                     │
+│  │  ├─ React Query (tanstack/react-query) - data fetching               │
+│  │  ├─ React Context - theme, global state                             │
+│  │  └─ React Hook Form - form handling                                 │
+│  │                                                                       │
+│  └─ API Client                                                          │
+│     └─ tRPC Client (React Query adapter)                               │
+│        └─ HTTP Batch Link → /api/trpc                                  │
+│           ├─ x-guest-session-id header (guests)                        │
+│           ├─ Cookies included in requests                              │
+│           └─ SuperJSON serialization                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              NETWORK BOUNDARY
+                                    |
+                                    | HTTPS
+                                    |
+                                    v
+
+SERVER SIDE (Node.js Express)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Express Server (server/_core/index.ts)                                 │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Middleware                                                     │   │
+│  │  ├─ JSON/URLEncoded parser (50MB limit)                       │   │
+│  │  ├─ Cookie parser                                             │   │
+│  │  ├─ CORS headers                                              │   │
+│  │  └─ Authentication context                                    │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Routes                                                         │   │
+│  │  ├─ /api/oauth/callback (OAuth callback handler)              │   │
+│  │  │  └─ Verifies code, exchanges for token, creates session    │   │
+│  │  │                                                             │   │
+│  │  ├─ /api/trpc (tRPC middleware)                               │   │
+│  │  │  └─ Routes all tRPC procedures                             │   │
+│  │  │                                                             │   │
+│  │  └─ * (Catch-all - static file serving)                       │   │
+│  │     ├─ Development: Vite dev server                            │   │
+│  │     └─ Production: dist/public/index.html                      │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ tRPC Router (server/routers.ts - 1388 lines)                   │   │
+│  │                                                                │   │
+│  │  ├─ auth (public)                                             │   │
+│  │  │  ├─ me: Get current user                                   │   │
+│  │  │  └─ logout: Clear session                                  │   │
+│  │  │                                                             │   │
+│  │  ├─ cptCodes (guest-or-auth)                                  │   │
+│  │  │  ├─ list, getById (public)                                 │   │
+│  │  │  ├─ create, update, delete (admin)                         │   │
+│  │  │  └─ bulkImport (admin)                                     │   │
+│  │  │                                                             │   │
+│  │  ├─ payers (guest-or-auth)                                    │   │
+│  │  │  ├─ list, getById (public)                                 │   │
+│  │  │  └─ create, update, delete (admin)                         │   │
+│  │  │                                                             │   │
+│  │  ├─ plans (protected)                                         │   │
+│  │  │  ├─ list, listByPayer                                      │   │
+│  │  │  └─ create, update, delete (admin)                         │   │
+│  │  │                                                             │   │
+│  │  ├─ rates (guest-or-auth)                                     │   │
+│  │  │  ├─ list, listWithDetails, getById, getByCptCode           │   │
+│  │  │  ├─ create, update, delete (admin)                         │   │
+│  │  │  └─ bulkImport (admin)                                     │   │
+│  │  │     NOTE: Rates stored as CENTS (integers)                 │   │
+│  │  │                                                             │   │
+│  │  ├─ multipliers (protected)                                   │   │
+│  │  │  ├─ list, getById                                          │   │
+│  │  │  └─ create, update, delete (admin)                         │   │
+│  │  │                                                             │   │
+│  │  ├─ scenarios (guest-or-auth)                                 │   │
+│  │  │  ├─ list, getById, getWithDetails                          │   │
+│  │  │  ├─ create: New scenario                                   │   │
+│  │  │  ├─ calculate: Complex revenue calculation                 │   │
+│  │  │  │           (3-dimensional rate lookup + weighting)       │   │
+│  │  │  └─ delete                                                 │   │
+│  │  │  Storage: Database (admin) | Session (user) | Memory (guest)   │
+│  │  │                                                             │   │
+│  │  ├─ valuations (guest-or-auth)                                │   │
+│  │  │  ├─ list, getById, getWithDetails                          │   │
+│  │  │  ├─ create: New valuation                                  │   │
+│  │  │  ├─ calculate: Earned vs Attributed revenue               │   │
+│  │  │  │           (Provider Type 1/2/3 logic)                  │   │
+│  │  │  ├─ update, delete                                         │   │
+│  │  │  └─ bulkEdit (admin)                                       │   │
+│  │  │  Storage: Database (admin) | Session (user)                │   │
+│  │  │                                                             │   │
+│  │  ├─ admin (protected)                                         │   │
+│  │  │  ├─ User Management                                        │   │
+│  │  │  │  ├─ listUsers                                           │   │
+│  │  │  │  └─ setRole: Admin role assignment                      │   │
+│  │  │  │                                                         │   │
+│  │  │  ├─ Calculation Settings                                   │   │
+│  │  │  │  ├─ getCalculationSettings                              │   │
+│  │  │  │  └─ updateCalculationSettings (commercial/medicaid mult)   │   │
+│  │  │  │                                                         │   │
+│  │  │  ├─ Institution CRUD                                       │   │
+│  │  │  ├─ Site CRUD                                              │   │
+│  │  │  ├─ Provider CRUD (Type1/Type2/Type3)                      │   │
+│  │  │  └─ Test Scenario Generation                               │   │
+│  │  │                                                             │   │
+│  │  └─ system (public)                                           │   │
+│  │     ├─ health: Health check                                   │   │
+│  │     └─ notifyOwner: Send notification (admin)                │   │
+│  │                                                                │   │
+│  │  Middleware Stack:                                            │   │
+│  │  ├─ publicProcedure: No auth required                         │   │
+│  │  ├─ protectedProcedure: User required                         │   │
+│  │  ├─ guestOrAuthProcedure: Guest OR user allowed              │   │
+│  │  └─ adminProcedure: Admin role required                       │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Context Layer (server/_core/context.ts)                        │   │
+│  │                                                                │   │
+│  │  Request → Extract Authentication                             │   │
+│  │   ├─ JWT from cookie (app_session_id)                         │   │
+│  │   ├─ x-guest-session-id header                                │   │
+│  │   └─ OAuth user validation                                    │   │
+│  │                                                                │   │
+│  │  Return Context:                                              │   │
+│  │   ├─ req, res (Express)                                       │   │
+│  │   ├─ user (User | null) - from JWT/OAuth                     │   │
+│  │   ├─ guestSessionId (string | null)                           │   │
+│  │   └─ isGuest (boolean)                                        │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Session Storage (server/sessionStorage.ts)                     │   │
+│  │                                                                │   │
+│  │  In-Memory Storage for:                                       │   │
+│  │   ├─ Guest sessions (no auth)                                 │   │
+│  │   ├─ User session overrides (non-admin users)                 │   │
+│  │   └─ Session-only data (rates, scenarios)                     │   │
+│  │                                                                │   │
+│  │  Map<sessionId, SessionData>                                  │   │
+│  │   ├─ sessionRates: Override/temporary rates                   │   │
+│  │   └─ sessionScenarios: Temporary scenarios                    │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ OAuth Integration (server/_core/oauth.ts)                      │   │
+│  │                                                                │   │
+│  │  1. Callback Handler                                          │   │
+│  │     /api/oauth/callback?code=XXX&state=YYY                    │   │
+│  │                                                                │   │
+│  │  2. Token Exchange (server/_core/sdk.ts)                       │   │
+│  │     POST {OAUTH_SERVER_URL}/exchangeToken                     │   │
+│  │     ← accessToken, refreshToken                               │   │
+│  │                                                                │   │
+│  │  3. Get User Info                                             │   │
+│  │     POST {OAUTH_SERVER_URL}/getUserInfo                       │   │
+│  │     ← openId, name, email, loginMethod                        │   │
+│  │                                                                │   │
+│  │  4. Store User in Database                                    │   │
+│  │     db.upsertUser(...)                                        │   │
+│  │     Bootstrap: admin if email = ADMIN_EMAIL                   │   │
+│  │                                                                │   │
+│  │  5. Create Session Token (JWT)                                │   │
+│  │     Signed with JWT_SECRET                                    │   │
+│  │     Expires: 1 year                                           │   │
+│  │                                                                │   │
+│  │  6. Set Cookie                                                │   │
+│  │     Name: app_session_id                                      │   │
+│  │     HttpOnly: true (XSS protection)                           │   │
+│  │     Secure: true (HTTPS only)                                 │   │
+│  │     SameSite: none (cross-domain)                             │   │
+│  │                                                                │   │
+│  │  7. Redirect to Home                                          │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              DATABASE BOUNDARY
+                                    |
+                                    | TCP MySQL
+                                    |
+                                    v
+
+DATABASE LAYER (MySQL + Drizzle ORM)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Database Connection Pool (server/db.ts - 1125 lines)                   │
+│                                                                          │
+│  Single connection instance per server process                          │
+│  getDb() → Returns cached drizzle instance                              │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Database Operations (1125 lines of database functions)         │   │
+│  │                                                                │   │
+│  │  User Operations:                                             │   │
+│  │   ├─ upsertUser, getUserByOpenId, getAllUsers                 │   │
+│  │   ├─ getUserByEmail, updateUserRole                           │   │
+│  │   └─ lastSignedIn tracking                                    │   │
+│  │                                                                │   │
+│  │  CPT Code Operations:                                         │   │
+│  │   ├─ getAllCptCodes, getCptCodeById, createCptCode            │   │
+│  │   ├─ updateCptCode, deleteCptCode                             │   │
+│  │   └─ getCodeByDescription                                     │   │
+│  │                                                                │   │
+│  │  Payer Operations:                                            │   │
+│  │   ├─ getAllPayers, getPayerById, createPayer                  │   │
+│  │   ├─ updatePayer, deletePayer                                 │   │
+│  │   └─ Type: Medicare | Medicaid | Commercial                  │   │
+│  │                                                                │   │
+│  │  Plan Operations:                                             │   │
+│  │   ├─ getAllPlans, getPlansByPayerId, createPlan               │   │
+│  │   ├─ updatePlan, deletePlan                                   │   │
+│  │   └─ Linked to payers                                         │   │
+│  │                                                                │   │
+│  │  Rate Operations:                                             │   │
+│  │   ├─ getAllRates, getRateById, getRatesByCptCode              │   │
+│  │   ├─ getRatesWithDetails (joins CPT + rate data)              │   │
+│  │   ├─ createRate, updateRate, deleteRate                       │   │
+│  │   └─ Format: rate = cents (integer)                           │   │
+│  │      Dimensions: CPT × PayerType × SiteType × Component       │   │
+│  │                                                                │   │
+│  │  Multiplier Operations:                                       │   │
+│  │   ├─ getAllMultipliers, getMultiplierById                     │   │
+│  │   ├─ createMultiplier, updateMultiplier, deleteMultiplier     │   │
+│  │   └─ Fields: professional, technical, global multipliers      │   │
+│  │                                                                │   │
+│  │  Scenario Operations:                                         │   │
+│  │   ├─ getAllScenarios, getScenarioById                         │   │
+│  │   ├─ getScenarioWithDetails (includes procedure mix)          │   │
+│  │   ├─ createScenario, updateScenario, deleteScenario           │   │
+│  │   ├─ createScenarioDetail, deleteScenarioDetails              │   │
+│  │   └─ Scope: per userId (admin persists)                       │   │
+│  │                                                                │   │
+│  │  Valuation Operations:                                        │   │
+│  │   ├─ getAllValuations, getValuationById                       │   │
+│  │   ├─ getValuationWithDetails, getValuationWithActivities      │   │
+│  │   ├─ createValuation, updateValuation, deleteValuation        │   │
+│  │   ├─ createValuationActivity, getValuationActivities          │   │
+│  │   └─ Scope: per userId, links provider + institution/site     │   │
+│  │                                                                │   │
+│  │  Institution Operations:                                      │   │
+│  │   ├─ getAllInstitutions, getActiveInstitutions                │   │
+│  │   ├─ getInstitutionById, createInstitution                    │   │
+│  │   ├─ updateInstitution, deleteInstitution                     │   │
+│  │   └─ Fields: name, shortName, active flag                     │   │
+│  │                                                                │   │
+│  │  Site Operations:                                             │   │
+│  │   ├─ getAllSites, getActiveSites, getSitesByInstitution       │   │
+│  │   ├─ getSiteById, createSite                                  │   │
+│  │   ├─ updateSite, deleteSite                                   │   │
+│  │   └─ Types: Article28 | FPA                                   │   │
+│  │      Links: institution (parent)                              │   │
+│  │                                                                │   │
+│  │  Provider Operations:                                         │   │
+│  │   ├─ getAllProviders, getActiveProviders                      │   │
+│  │   ├─ getProvidersByInstitution, getProviderById               │   │
+│  │   ├─ createProvider, updateProvider, deleteProvider           │   │
+│  │   └─ Types: Type1 | Type2 | Type3                             │   │
+│  │      Links: homeInstitution, primarySite                      │   │
+│  │                                                                │   │
+│  │  Calculation Settings Operations:                             │   │
+│  │   ├─ getCalculationSettings                                   │   │
+│  │   ├─ upsertCalculationSettings                                │   │
+│  │   ├─ initializeCalculationSettings (defaults)                 │   │
+│  │   └─ Global multipliers: commercial/medicaid technical        │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ Schema (drizzle/schema.ts - 260 lines)                         │   │
+│  │                                                                │   │
+│  │  13 Tables:                                                   │   │
+│  │                                                                │   │
+│  │  1. users                                                     │   │
+│  │     id, openId (UNIQUE), name, email, loginMethod             │   │
+│  │     role (user|admin), createdAt, updatedAt, lastSignedIn     │   │
+│  │                                                                │   │
+│  │  2. cptCodes                                                  │   │
+│  │     id, code (UNIQUE), description, workRvu (decimal)         │   │
+│  │     procedureType (imaging|procedure|visit)                   │   │
+│  │                                                                │   │
+│  │  3. institutions                                              │   │
+│  │     id, name (UNIQUE), shortName, active                      │   │
+│  │                                                                │   │
+│  │  4. sites                                                     │   │
+│  │     id, name, siteType (Article28|FPA)                        │   │
+│  │     institutionId (FK), active, notes                         │   │
+│  │                                                                │   │
+│  │  5. providers                                                 │   │
+│  │     id, name, providerType (Type1|Type2|Type3)                │   │
+│  │     homeInstitutionId (FK), primarySiteId (FK)                │   │
+│  │     active, notes                                             │   │
+│  │                                                                │   │
+│  │  6. payers                                                    │   │
+│  │     id, payerType (Medicare|Medicaid|Commercial)              │   │
+│  │     payerName                                                 │   │
+│  │                                                                │   │
+│  │  7. plans                                                     │   │
+│  │     id, payerId (FK), planName                                │   │
+│  │                                                                │   │
+│  │  8. rates                                                     │   │
+│  │     id, cptCodeId (FK), payerType                             │   │
+│  │     siteType (FPA|Article28), component (Prof|Tech|Global)    │   │
+│  │     rate (INT as cents), verified, notes                      │   │
+│  │     INDEX: (cptCodeId, payerType, siteType, component)        │   │
+│  │                                                                │   │
+│  │  9. payer_multipliers                                         │   │
+│  │     id, payerId (FK), payerType                               │   │
+│  │     professionalMultiplier (INT basis points)                 │   │
+│  │     technicalMultiplier, globalMultiplier                     │   │
+│  │     notes                                                     │   │
+│  │                                                                │   │
+│  │  10. scenarios                                                │   │
+│  │      id, userId (FK), providerName, totalPatients             │   │
+│  │      medicarePercent, commercialPercent, medicaidPercent      │   │
+│  │      siteType (FPA|Article28)                                 │   │
+│  │      rateMode (manual|calculated)                             │   │
+│  │      fpaTotal (INT cents), article28Total (INT cents)         │   │
+│  │                                                                │   │
+│  │  11. scenario_details                                         │   │
+│  │      id, scenarioId (FK), cptCodeId (FK), quantity            │   │
+│  │                                                                │   │
+│  │  12. valuations                                               │   │
+│  │      id, userId (FK), providerId (FK)                         │   │
+│  │      institutionId (FK), siteId (FK)                          │   │
+│  │      name, description, monthlyPatients                       │   │
+│  │      payerMix (JSON)                                          │   │
+│  │                                                                │   │
+│  │  13. valuation_activities                                     │   │
+│  │      id, valuationId (FK), cptCodeId (FK)                     │   │
+│  │      monthlyOrders, monthlyReads, monthlyPerforms             │   │
+│  │                                                                │   │
+│  │  14. scenario_provider_activities (for future use)            │   │
+│  │      id, scenarioId, providerId, cptCodeId                    │   │
+│  │      monthlyOrdered, monthlyRead, monthlyPerformed            │   │
+│  │                                                                │   │
+│  │  15. calculation_settings                                     │   │
+│  │      id, commercialTechnicalMultiplier (INT basis points)     │   │
+│  │      medicaidTechnicalMultiplier                              │   │
+│  │                                                                │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+DATA FLOW EXAMPLES
+================================================================================
+
+Example 1: Rate Calculation Flow
+─────────────────────────────────
+1. Client: POST /api/trpc/scenarios.calculate?id=1
+2. Server: getScenarioWithDetails(1) from database
+3. Server: getAllRates() from database
+4. Server: For each procedure in scenario:
+   - Lookup 9 rates:
+     * Medicare FPA Global
+     * Commercial FPA Global
+     * Medicaid FPA Global
+     * Medicare Article28 Professional
+     * Commercial Article28 Professional
+     * Medicaid Article28 Professional
+     * Medicare Article28 Technical
+     * Commercial Article28 Technical
+     * Medicaid Article28 Technical
+5. Server: Calculate weighted average:
+   - FPA = (Medicare rate * 40%) + (Commercial rate * 40%) + (Medicaid rate * 20%)
+   - Article28 Prof = same calculation
+   - Article28 Tech = same calculation (with multipliers if calculated mode)
+6. Server: Multiply by quantity, sum totals
+7. Return: { fpaTotal, article28Total, article28Professional, ... }
+
+Example 2: Valuation Calculation Flow
+──────────────────────────────────────
+1. Client: POST /api/trpc/valuations.calculate
+2. Server: getValuationWithDetails & getValuationWithActivities
+3. Server: Determine siteType from site
+4. Server: For each activity:
+   - Lookup CPT code (to identify imaging vs procedure)
+   - Lookup rates (Professional, Technical components)
+   - Based on provider.providerType:
+     * Type1: Earned revenue = their activity revenue
+     * Type2: Earned revenue = their activity revenue (home institution)
+     * Type3: No earned revenue
+   - Calculate RVUs from rates + work RVU
+   - Track separate attribution for ordering physician
+5. Return: { earnedRevenue, attributedRevenue, earnedRvus, ... }
+
+Example 3: Guest vs Authenticated User
+───────────────────────────────────────
+Guest User:
+- Request includes x-guest-session-id header
+- Context: isGuest = true, user = null
+- Rates fetched from DB + merged with sessionStorage rates
+- Scenario created in sessionStorage (memory), not database
+- Can't persist data after session ends
+
+Authenticated User:
+- Cookie includes JWT session token
+- Context: isGuest = false, user = { id, email, role, ... }
+- If role = 'admin': All data persists to database
+- If role = 'user': Can create scenarios (in session or DB)
+- Can persist across sessions
+
+TECHNOLOGY STACK
+================================================================================
+
+Frontend:
+  Framework: React 19.1.1 (with JSX preserved)
+  Build Tool: Vite 7.1.7
+  Routing: wouter 3.3.5 (lightweight router)
+  UI Components: Radix UI (13+ packages)
+  Styling: Tailwind CSS 4.1.14
+  Forms: React Hook Form 7.64.0
+  State: React Query 5.90.2, React Context
+  API Client: tRPC React Query 11.6.0
+  Validation: Zod 4.1.12
+  Charts: Recharts 2.15.2
+
+Backend:
+  Runtime: Node.js 18+
+  Framework: Express.js 4.21.2
+  API Protocol: tRPC 11.6.0 (with Express adapter)
+  ORM: Drizzle ORM 0.44.5
+  Database Driver: mysql2/promise 3.15.0
+  Authentication: Jose (JWT) 6.1.0
+  Serialization: SuperJSON 1.13.3
+  Environment: dotenv 17.2.2
+
+Build Tools:
+  Server Build: esbuild 0.25.0 (bundles to dist/index.js)
+  Type Checking: TypeScript 5.9.3
+  Testing: Vitest 2.1.4
+  DB Migrations: Drizzle Kit 0.31.4
+  Code Format: Prettier 3.6.2
+
+Deployment:
+  Target: Vercel (or any Node.js host)
+  Environment: Node.js runtime with dynamic port detection
+
+================================================================================
