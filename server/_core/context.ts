@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
+import { authenticateClerkRequest } from "./clerkAuth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -27,7 +27,7 @@ export async function createContext(
   // Try to authenticate if not a guest
   if (!isGuest) {
     try {
-      user = await sdk.authenticateRequest(opts.req);
+      user = await authenticateClerkRequest(opts.req);
     } catch (error) {
       // Authentication is optional for public procedures.
       user = null;

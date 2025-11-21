@@ -1,10 +1,8 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, guestOrAuthProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { 
+import {
   updateSessionRate, getSessionId, getSessionRate, getAllSessionRates,
   createSessionScenario, getAllSessionScenarios, getSessionScenario, deleteSessionScenario
 } from "./sessionStorage";
@@ -21,10 +19,12 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
+    // Returns the current user from our database (synced from Clerk)
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    // Logout is handled entirely by Clerk on the client side
+    // This endpoint is kept for API compatibility but does nothing server-side
+    logout: publicProcedure.mutation(() => {
+      // Clerk handles session invalidation client-side
       return { success: true } as const;
     }),
   }),

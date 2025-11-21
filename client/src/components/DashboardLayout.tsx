@@ -19,13 +19,12 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
+import { APP_LOGO, APP_TITLE } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Database, Calculator, Shield, Activity } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
-import { Button } from "./ui/button";
 import { GuestModeBadge } from "./GuestModeBadge";
 import { isGuestMode } from "@/lib/guestSession";
 

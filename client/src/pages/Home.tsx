@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLoginUrl, APP_TITLE } from "@/const";
+import { APP_TITLE } from "@/const";
 import { useLocation } from "wouter";
 import { Calculator, BarChart3, Database, TrendingUp } from "lucide-react";
 import { useEffect } from "react";
@@ -29,6 +29,9 @@ export default function Home() {
     return null;
   }
 
+  // Handler to go to auth page
+  const goToAuth = () => setLocation("/auth");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50">
       {/* Header */}
@@ -38,9 +41,7 @@ export default function Home() {
             <Calculator className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">{APP_TITLE}</h1>
           </div>
-          <Button asChild>
-            <a href={getLoginUrl()}>Sign In</a>
-          </Button>
+          <Button onClick={goToAuth}>Sign In</Button>
         </div>
       </header>
 
@@ -51,13 +52,11 @@ export default function Home() {
             Model Healthcare Reimbursement with Confidence
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Compare revenue outcomes between Article 28 (hospital outpatient) and FPA (freestanding office) sites. 
+            Compare revenue outcomes between Article 28 (hospital outpatient) and FPA (freestanding office) sites.
             Make data-driven decisions with comprehensive scenario analysis and payer mix modeling.
           </p>
           <div className="flex gap-4 justify-center pt-4">
-            <Button size="lg" asChild>
-              <a href={getLoginUrl()}>Sign In</a>
-            </Button>
+            <Button size="lg" onClick={goToAuth}>Sign In</Button>
             <Button size="lg" variant="outline" onClick={() => {
               startGuestSession();
               setLocation('/dashboard');
@@ -175,8 +174,8 @@ export default function Home() {
             <p className="text-lg text-teal-50 max-w-2xl mx-auto">
               Start modeling scenarios today and make informed decisions about your site-of-service strategy.
             </p>
-            <Button size="lg" variant="secondary" asChild>
-              <a href={getLoginUrl()}>Sign In to Get Started</a>
+            <Button size="lg" variant="secondary" onClick={goToAuth}>
+              Sign In to Get Started
             </Button>
           </CardContent>
         </Card>
