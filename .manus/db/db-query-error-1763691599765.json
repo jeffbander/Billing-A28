@@ -1,0 +1,8 @@
+{
+  "query": "SELECT code, description, workRvu, profRate, techRate, globalRate, codeType FROM cpt_codes WHERE code = '93306'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT code, description, workRvu, profRate, techRate, globalRate, codeType FROM cpt_codes WHERE code = '93306'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'profrate' in 'field list'"
+  ]
+}

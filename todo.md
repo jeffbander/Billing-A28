@@ -357,3 +357,12 @@
 - [ ] FPA site scenario with mixed activities
 - [ ] Article 28 site scenario with prof/tech split
 - [ ] Realistic activity volumes (20-100 orders/reads per code)
+
+## Rate Calculation Bug Fix (100x Multiplier Issue)
+- [x] Query database to verify how rates are stored for CPT 93306 (found: 7200 cents prof, 64800 cents tech)
+- [x] Check if rates are stored in cents (7200, 64800) instead of dollars (YES - stored in cents)
+- [x] Identify where conversion from cents to dollars should happen (in calculation code when using rate values)
+- [x] Fix the bug in calculation logic (added / 100 to all rate usages in routers.ts)
+- [x] Test with 2 echo scenario (CONFIRMED: now shows $144 prof, $1,296 tech - correct!)
+- [x] Verify fix applies to all CPT codes and all site types (conversion applied to all rate calculations)
+- [ ] Save checkpoint with bug fix

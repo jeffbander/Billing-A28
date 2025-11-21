@@ -1,0 +1,16 @@
+{
+  "query": "SELECT code, description, workRvu, procedureType FROM cpt_codes WHERE code = '93306'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT code, description, workRvu, procedureType FROM cpt_codes WHERE code = '93306'",
+  "rows": [
+    {
+      "code": "93306",
+      "description": "Echocardiography, complete",
+      "workRvu": "1.40",
+      "procedureType": "imaging"
+    }
+  ],
+  "messages": [],
+  "stdout": "code\tdescription\tworkRvu\tprocedureType\n93306\tEchocardiography, complete\t1.40\timaging\n",
+  "stderr": "",
+  "execution_time_ms": 76
+}

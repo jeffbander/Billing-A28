@@ -1,0 +1,8 @@
+{
+  "query": "SELECT pr.*, p.name as payer_name FROM payer_rates pr JOIN payers p ON pr.payerId = p.id WHERE pr.cptCode = '93306' AND p.name = 'Medicare' LIMIT 1",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2jncd3HzaGvHVmU.root --database GZXuvUixHAtWgTJfx39qia --execute SELECT pr.*, p.name as payer_name FROM payer_rates pr JOIN payers p ON pr.payerId = p.id WHERE pr.cptCode = '93306' AND p.name = 'Medicare' LIMIT 1",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'gzxuvuixhatwgtjfx39qia.payer_rates' doesn't exist"
+  ]
+}

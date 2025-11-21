@@ -1281,35 +1281,35 @@ export const appRouter = router({
             // EARNED: RVUs and prof revenue from reads (goes to reader's home institution)
             activityEarnedProfRvus = (activity.monthlyReads || 0) * workRvu;
             if (siteType === 'Article28' && professionalRate) {
-              activityEarnedProfRevenue = (activity.monthlyReads || 0) * professionalRate.rate;
+              activityEarnedProfRevenue = (activity.monthlyReads || 0) * (professionalRate.rate / 100);
             } else if (siteType === 'FPA' && globalRate) {
-              activityEarnedProfRevenue = (activity.monthlyReads || 0) * globalRate.rate;
+              activityEarnedProfRevenue = (activity.monthlyReads || 0) * (globalRate.rate / 100);
             }
             
             // EARNED: Tech revenue from reads (goes to site)
             if (siteType === 'Article28' && technicalRate) {
-              activityEarnedTechRevenue = (activity.monthlyReads || 0) * technicalRate.rate;
+              activityEarnedTechRevenue = (activity.monthlyReads || 0) * (technicalRate.rate / 100);
             }
             
             // ATTRIBUTED: Prof RVUs and revenue tracked for ordering MD
             activityAttributedProfRvus = (activity.monthlyOrders || 0) * workRvu;
             if (siteType === 'Article28' && professionalRate) {
-              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * professionalRate.rate;
+              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * (professionalRate.rate / 100);
             } else if (siteType === 'FPA' && globalRate) {
-              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * globalRate.rate;
+              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * (globalRate.rate / 100);
             }
             
             // ATTRIBUTED: Tech revenue tracked for ordering MD
             if (siteType === 'Article28' && technicalRate) {
-              activityAttributedTechRevenue = (activity.monthlyOrders || 0) * technicalRate.rate;
+              activityAttributedTechRevenue = (activity.monthlyOrders || 0) * (technicalRate.rate / 100);
             }
           } else {
             // For procedures/visits: only performs, no orders/reads split
             activityEarnedProfRvus = (activity.monthlyPerforms || 0) * workRvu;
             if (siteType === 'Article28' && professionalRate) {
-              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * professionalRate.rate;
+              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * (professionalRate.rate / 100);
             } else if (siteType === 'FPA' && globalRate) {
-              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * globalRate.rate;
+              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * (globalRate.rate / 100);
             }
             // No technical or attributed for non-imaging
           }
