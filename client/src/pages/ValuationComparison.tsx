@@ -106,26 +106,26 @@ export default function ValuationComparison() {
     name: v.valuation.name.length > 20 
       ? v.valuation.name.substring(0, 20) + "..." 
       : v.valuation.name,
-    RVUs: v.summary.totalRvus,
-    "Prof. Revenue": v.summary.totalProfessionalRevenue / 1000, // Convert to thousands
-    "Tech. Revenue": v.summary.totalTechnicalRevenue / 1000,
+    RVUs: v.summary.earnedProfessionalRvus,
+    "Prof. Revenue": v.summary.earnedProfessionalRevenue / 1000, // Convert to thousands
+    "Tech. Revenue": v.summary.earnedTechnicalRevenue / 1000,
   }));
 
   // Calculate differences (compared to first valuation)
   const baseline = valuations[0];
   const differences = valuations.slice(1).map((v) => ({
     valuation: v,
-    rvuDiff: v.summary.totalRvus - baseline.summary.totalRvus,
-    rvuDiffPercent: baseline.summary.totalRvus > 0 
-      ? ((v.summary.totalRvus - baseline.summary.totalRvus) / baseline.summary.totalRvus) * 100 
+    rvuDiff: v.summary.earnedProfessionalRvus - baseline.summary.earnedProfessionalRvus,
+    rvuDiffPercent: baseline.summary.earnedProfessionalRvus > 0 
+      ? ((v.summary.earnedProfessionalRvus - baseline.summary.earnedProfessionalRvus) / baseline.summary.earnedProfessionalRvus) * 100 
       : 0,
-    profRevDiff: v.summary.totalProfessionalRevenue - baseline.summary.totalProfessionalRevenue,
-    profRevDiffPercent: baseline.summary.totalProfessionalRevenue > 0
-      ? ((v.summary.totalProfessionalRevenue - baseline.summary.totalProfessionalRevenue) / baseline.summary.totalProfessionalRevenue) * 100
+    profRevDiff: v.summary.earnedProfessionalRevenue - baseline.summary.earnedProfessionalRevenue,
+    profRevDiffPercent: baseline.summary.earnedProfessionalRevenue > 0
+      ? ((v.summary.earnedProfessionalRevenue - baseline.summary.earnedProfessionalRevenue) / baseline.summary.earnedProfessionalRevenue) * 100
       : 0,
-    techRevDiff: v.summary.totalTechnicalRevenue - baseline.summary.totalTechnicalRevenue,
-    techRevDiffPercent: baseline.summary.totalTechnicalRevenue > 0
-      ? ((v.summary.totalTechnicalRevenue - baseline.summary.totalTechnicalRevenue) / baseline.summary.totalTechnicalRevenue) * 100
+    techRevDiff: v.summary.earnedTechnicalRevenue - baseline.summary.earnedTechnicalRevenue,
+    techRevDiffPercent: baseline.summary.earnedTechnicalRevenue > 0
+      ? ((v.summary.earnedTechnicalRevenue - baseline.summary.earnedTechnicalRevenue) / baseline.summary.earnedTechnicalRevenue) * 100
       : 0,
   }));
 
@@ -186,18 +186,18 @@ export default function ValuationComparison() {
               <CardContent className="space-y-2">
                 <div>
                   <p className="text-sm text-muted-foreground">RVUs</p>
-                  <p className="text-2xl font-bold">{v.summary.totalRvus.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{v.summary.earnedProfessionalRvus.toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Prof. Revenue</p>
                   <p className="text-lg font-semibold text-green-600">
-                    ${v.summary.totalProfessionalRevenue.toLocaleString()}
+                    ${v.summary.earnedProfessionalRevenue.toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tech. Revenue</p>
                   <p className="text-lg font-semibold text-blue-600">
-                    ${v.summary.totalTechnicalRevenue.toLocaleString()}
+                    ${v.summary.earnedTechnicalRevenue.toLocaleString()}
                   </p>
                 </div>
               </CardContent>
@@ -330,7 +330,7 @@ export default function ValuationComparison() {
                             <div>
                               <p className="font-mono font-medium">{quantity}</p>
                               <p className="text-sm text-muted-foreground">
-                                {activity.rvusEarned.toFixed(2)} RVUs
+                                {activity.earnedProfRvus.toFixed(2)} RVUs
                               </p>
                             </div>
                           </TableCell>

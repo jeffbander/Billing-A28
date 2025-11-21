@@ -11,6 +11,7 @@ import {
   scenarioDetails, InsertScenarioDetail, ScenarioDetail,
   calculationSettings, InsertCalculationSettings, CalculationSettings,
   institutions, InsertInstitution, Institution,
+  sites, InsertSite, Site,
   providers, InsertProvider, Provider,
   scenarioProviderActivities, InsertScenarioProviderActivity, ScenarioProviderActivity,
   valuations, InsertValuation, Valuation,
@@ -660,6 +661,100 @@ export async function deleteProvider(id: number): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("[Database] Failed to delete provider:", error);
+    return false;
+  }
+}
+
+// ===== Site Management =====
+export async function getAllSites(): Promise<Site[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(sites).orderBy(sites.name);
+  } catch (error) {
+    console.error("[Database] Failed to get sites:", error);
+    return [];
+  }
+}
+
+export async function getActiveSites(): Promise<Site[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(sites)
+      .where(eq(sites.active, true))
+      .orderBy(sites.name);
+  } catch (error) {
+    console.error("[Database] Failed to get active sites:", error);
+    return [];
+  }
+}
+
+export async function getSiteById(id: number): Promise<Site | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.select().from(sites).where(eq(sites.id, id)).limit(1);
+    return result[0];
+  } catch (error) {
+    console.error("[Database] Failed to get site:", error);
+    return undefined;
+  }
+}
+
+export async function getSitesByInstitution(institutionId: number): Promise<Site[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(sites)
+      .where(eq(sites.institutionId, institutionId))
+      .orderBy(sites.name);
+  } catch (error) {
+    console.error("[Database] Failed to get sites by institution:", error);
+    return [];
+  }
+}
+
+export async function createSite(site: InsertSite): Promise<Site | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    const result = await db.insert(sites).values(site);
+    const insertId = Number(result[0].insertId);
+    return await getSiteById(insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create site:", error);
+    return undefined;
+  }
+}
+
+export async function updateSite(id: number, updates: Partial<InsertSite>): Promise<Site | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  try {
+    await db.update(sites).set(updates).where(eq(sites.id, id));
+    return await getSiteById(id);
+  } catch (error) {
+    console.error("[Database] Failed to update site:", error);
+    return undefined;
+  }
+}
+
+export async function deleteSite(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(sites).where(eq(sites.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete site:", error);
     return false;
   }
 }

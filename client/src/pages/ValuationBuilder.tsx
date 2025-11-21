@@ -21,6 +21,8 @@ export default function ValuationBuilder() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [providerId, setProviderId] = useState<number | null>(null);
+  const [institutionId, setInstitutionId] = useState<number | null>(null);
+  const [siteId, setSiteId] = useState<number | null>(null);
   const [monthlyPatients, setMonthlyPatients] = useState(0);
   const [activities, setActivities] = useState<Array<{
     cptCodeId: number;
@@ -30,6 +32,11 @@ export default function ValuationBuilder() {
   }>>([]);
 
   const { data: providers } = trpc.admin.listProviders.useQuery();
+  const { data: institutions } = trpc.admin.listActiveInstitutions.useQuery();
+  const { data: sites } = trpc.admin.getSitesByInstitution.useQuery(
+    { institutionId: institutionId! },
+    { enabled: !!institutionId }
+  );
   const { data: cptCodes } = trpc.cptCodes.list.useQuery();
   const createValuation = trpc.valuations.create.useMutation();
 
@@ -65,6 +72,16 @@ export default function ValuationBuilder() {
       return;
     }
 
+    if (!institutionId) {
+      toast.error("Please select an institution");
+      return;
+    }
+
+    if (!siteId) {
+      toast.error("Please select a site");
+      return;
+    }
+
     if (activities.length === 0) {
       toast.error("Please add at least one CPT code activity");
       return;
@@ -82,6 +99,8 @@ export default function ValuationBuilder() {
         name,
         description,
         providerId,
+        institutionId,
+        siteId,
         monthlyPatients,
         activities,
       });
@@ -184,6 +203,54 @@ export default function ValuationBuilder() {
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="institution">Institution *</Label>
+              <Select
+                value={institutionId?.toString() || ""}
+                onValueChange={(value) => {
+                  setInstitutionId(Number(value));
+                  setSiteId(null); // Reset site when institution changes
+                }}
+              >
+                <SelectTrigger id="institution">
+                  <SelectValue placeholder="Select institution" />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutions?.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id.toString()}>
+                      {inst.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Institution where services are provided
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="site">Site *</Label>
+              <Select
+                value={siteId?.toString() || ""}
+                onValueChange={(value) => setSiteId(Number(value))}
+                disabled={!institutionId}
+              >
+                <SelectTrigger id="site">
+                  <SelectValue placeholder={institutionId ? "Select site" : "Select institution first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites?.map((site) => (
+                    <SelectItem key={site.id} value={site.id.toString()}>
+                      {site.name} ({site.siteType})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Practice site (FPA or Article 28)
+              </p>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="monthlyPatients">Monthly Patient Visits</Label>

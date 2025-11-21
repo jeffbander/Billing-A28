@@ -122,109 +122,142 @@ export default function ValuationResults() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
+        {/* Site Information */}
+        {results.site && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total RVUs</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle>Site Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatNumber(summary.totalRvus)}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Site Name</p>
+                  <p className="font-medium">{results.site.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Site Type</p>
+                  <Badge variant={results.site.siteType === "FPA" ? "default" : "secondary"}>
+                    {results.site.siteType}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Institution</p>
+                  <p className="font-medium">{results.valuationInstitution?.name || "N/A"}</p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Work RVUs earned per month
-              </p>
             </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Professional Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary.totalProfessionalRevenue)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                → {summary.professionalRevenueDestination}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Earned Revenue Summary */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Earned Revenue & RVUs</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Actual revenue and RVUs that go to institutions and sites
+          </p>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Earned RVUs</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatNumber(summary.earnedProfessionalRvus)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Work RVUs from reading/performing
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Technical Revenue</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary.totalTechnicalRevenue)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                → {summary.technicalRevenueDestination}
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Earned Prof. Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(summary.earnedProfessionalRevenue)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  → {summary.earnedProfessionalDestination}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Earned Tech. Revenue</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(summary.earnedTechnicalRevenue)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  → {summary.earnedTechnicalDestination}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Revenue Attribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Attribution</CardTitle>
-            <CardDescription>
-              Where the revenue flows based on provider type
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">Professional Revenue</p>
-                  <p className="text-sm text-muted-foreground">
-                    From reading/performing procedures
+        {/* Attributed Revenue Summary */}
+        {summary.attributedProfessionalRvus > 0 && (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Attributed Revenue & RVUs</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Revenue and RVUs tracked for ordering physician (not actual payment)
+            </p>
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Attributed RVUs</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatNumber(summary.attributedProfessionalRvus)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    From ordering studies
                   </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    {formatCurrency(summary.totalProfessionalRevenue)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    → {summary.professionalRevenueRecipient}
-                  </p>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">Technical Revenue</p>
-                  <p className="text-sm text-muted-foreground">
-                    From facility services
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Attributed Prof. Revenue</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(summary.attributedProfessionalRevenue)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tracked for {summary.attributedToProvider}
                   </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    {formatCurrency(summary.totalTechnicalRevenue)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    → Mount Sinai West Article 28
-                  </p>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              {provider.providerType === 'Type3' && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-sm text-amber-900">
-                    <strong>Type 3 Provider Note:</strong> This provider generates technical revenue for the facility
-                    but does not earn RVUs or professional revenue (referring provider only).
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Attributed Tech. Revenue</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(summary.attributedTechnicalRevenue)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tracked for {summary.attributedToProvider}
                   </p>
-                </div>
-              )}
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
         {/* Activity Breakdown */}
         <Card>
@@ -263,26 +296,26 @@ export default function ValuationResults() {
                       {activity.procedureType !== 'imaging' ? activity.monthlyPerforms : '-'}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatNumber(activity.rvusEarned)}
+                      {formatNumber(activity.earnedProfRvus)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(activity.professionalRevenue)}
+                      {formatCurrency(activity.earnedProfRevenue)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(activity.technicalRevenue)}
+                      {formatCurrency(activity.earnedTechRevenue)}
                     </TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="font-bold bg-muted/50">
-                  <TableCell colSpan={5}>Total</TableCell>
+                  <TableCell colSpan={5}>Total Earned</TableCell>
                   <TableCell className="text-right">
-                    {formatNumber(summary.totalRvus)}
+                    {formatNumber(summary.earnedProfessionalRvus)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency(summary.totalProfessionalRevenue)}
+                    {formatCurrency(summary.earnedProfessionalRevenue)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency(summary.totalTechnicalRevenue)}
+                    {formatCurrency(summary.earnedTechnicalRevenue)}
                   </TableCell>
                 </TableRow>
               </TableBody>

@@ -846,6 +846,7 @@ export const appRouter = router({
         name: z.string().min(1).max(200).optional(),
         providerType: z.enum(["Type1", "Type2", "Type3"]).optional(),
         homeInstitutionId: z.number().optional(),
+        primarySiteId: z.number().nullable().optional(),
         active: z.boolean().optional(),
         notes: z.string().optional(),
       }))
@@ -858,6 +859,60 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const success = await db.deleteProvider(input.id);
+        return { success };
+      }),
+    
+    // Sites Management
+    listSites: adminProcedure.query(async () => {
+      return await db.getAllSites();
+    }),
+    
+    listActiveSites: guestOrAuthProcedure.query(async () => {
+      return await db.getActiveSites();
+    }),
+    
+    getSite: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteById(input.id);
+      }),
+    
+    getSitesByInstitution: guestOrAuthProcedure
+      .input(z.object({ institutionId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSitesByInstitution(input.institutionId);
+      }),
+    
+    createSite: adminProcedure
+      .input(z.object({
+        name: z.string().min(1).max(200),
+        siteType: z.enum(["FPA", "Article28"]),
+        institutionId: z.number(),
+        active: z.boolean().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createSite(input);
+      }),
+    
+    updateSite: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(200).optional(),
+        siteType: z.enum(["FPA", "Article28"]).optional(),
+        institutionId: z.number().optional(),
+        active: z.boolean().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return await db.updateSite(id, updates);
+      }),
+    
+    deleteSite: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await db.deleteSite(input.id);
         return { success };
       }),
   }),
@@ -889,6 +944,8 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         providerId: z.number(),
+        institutionId: z.number().optional(),
+        siteId: z.number().optional(),
         name: z.string().max(200),
         description: z.string().optional(),
         monthlyPatients: z.number().default(0),
@@ -1027,15 +1084,34 @@ export const appRouter = router({
           ? await db.getInstitutionById(provider.homeInstitutionId)
           : null;
         
+        // Get site information if available
+        const site = valuation.siteId
+          ? await db.getSiteById(valuation.siteId)
+          : null;
+        
+        const valuationInstitution = valuation.institutionId
+          ? await db.getInstitutionById(valuation.institutionId)
+          : null;
+        
         // Get all CPT codes and rates
         const allCptCodes = await db.getAllCptCodes();
         const allRates = await db.getRatesWithDetails();
         
+        // Determine site type (default to Article28 for backward compatibility)
+        const siteType = site?.siteType || 'Article28';
+        
         // Calculate RVUs and revenue for each activity
         const activityResults = [];
-        let totalRvus = 0;
-        let totalProfessionalRevenue = 0;
-        let totalTechnicalRevenue = 0;
+        
+        // Earned values (actual $ and RVUs to institutions/sites)
+        let earnedProfessionalRvus = 0;
+        let earnedProfessionalRevenue = 0;
+        let earnedTechnicalRevenue = 0;
+        
+        // Attributed values (tracking for ordering physician)
+        let attributedProfessionalRvus = 0;
+        let attributedProfessionalRevenue = 0;
+        let attributedTechnicalRevenue = 0;
         
         for (const activity of valuation.activities) {
           const cptCode = allCptCodes.find(c => c.id === activity.cptCodeId);
@@ -1044,98 +1120,132 @@ export const appRouter = router({
           const workRvu = cptCode.workRvu ? parseFloat(cptCode.workRvu) : 0;
           const isImaging = cptCode.procedureType === 'imaging';
           
-          // Calculate RVUs
-          let activityRvus = 0;
-          if (isImaging) {
-            // For imaging: RVUs only from reads
-            activityRvus = (activity.monthlyReads || 0) * workRvu;
-          } else {
-            // For procedures/visits: RVUs from performs
-            activityRvus = (activity.monthlyPerforms || 0) * workRvu;
-          }
-          totalRvus += activityRvus;
-          
-          // Calculate revenue
-          // Get Article 28 rates (assuming provider works at Article 28 facility)
+          // Get rates based on site type
           const professionalRate = allRates.find(
             r => r.cptCodeId === cptCode.id && 
-                 r.siteType === 'Article28' && 
+                 r.siteType === siteType && 
                  r.component === 'Professional' &&
-                 r.payerType === 'Medicare' // Use Medicare as base
+                 r.payerType === 'Medicare'
           );
           
           const technicalRate = allRates.find(
             r => r.cptCodeId === cptCode.id && 
-                 r.siteType === 'Article28' && 
+                 r.siteType === siteType && 
                  r.component === 'Technical' &&
                  r.payerType === 'Medicare'
           );
           
-          let activityProfessionalRevenue = 0;
-          let activityTechnicalRevenue = 0;
+          const globalRate = allRates.find(
+            r => r.cptCodeId === cptCode.id && 
+                 r.siteType === 'FPA' && 
+                 r.component === 'Global' &&
+                 r.payerType === 'Medicare'
+          );
+          
+          let activityEarnedProfRvus = 0;
+          let activityEarnedProfRevenue = 0;
+          let activityEarnedTechRevenue = 0;
+          let activityAttributedProfRvus = 0;
+          let activityAttributedProfRevenue = 0;
+          let activityAttributedTechRevenue = 0;
           
           if (isImaging) {
-            // Professional revenue from reads
-            if (professionalRate) {
-              activityProfessionalRevenue = (activity.monthlyReads || 0) * professionalRate.rate;
+            // EARNED: RVUs and prof revenue from reads (goes to reader's home institution)
+            activityEarnedProfRvus = (activity.monthlyReads || 0) * workRvu;
+            if (siteType === 'Article28' && professionalRate) {
+              activityEarnedProfRevenue = (activity.monthlyReads || 0) * professionalRate.rate;
+            } else if (siteType === 'FPA' && globalRate) {
+              activityEarnedProfRevenue = (activity.monthlyReads || 0) * globalRate.rate;
             }
-            // Technical revenue from orders (someone has to read them)
-            if (technicalRate) {
-              activityTechnicalRevenue = (activity.monthlyOrders || 0) * technicalRate.rate;
+            
+            // EARNED: Tech revenue from reads (goes to site)
+            if (siteType === 'Article28' && technicalRate) {
+              activityEarnedTechRevenue = (activity.monthlyReads || 0) * technicalRate.rate;
+            }
+            
+            // ATTRIBUTED: Prof RVUs and revenue tracked for ordering MD
+            activityAttributedProfRvus = (activity.monthlyOrders || 0) * workRvu;
+            if (siteType === 'Article28' && professionalRate) {
+              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * professionalRate.rate;
+            } else if (siteType === 'FPA' && globalRate) {
+              activityAttributedProfRevenue = (activity.monthlyOrders || 0) * globalRate.rate;
+            }
+            
+            // ATTRIBUTED: Tech revenue tracked for ordering MD
+            if (siteType === 'Article28' && technicalRate) {
+              activityAttributedTechRevenue = (activity.monthlyOrders || 0) * technicalRate.rate;
             }
           } else {
-            // Professional revenue from performs
-            if (professionalRate) {
-              activityProfessionalRevenue = (activity.monthlyPerforms || 0) * professionalRate.rate;
+            // For procedures/visits: only performs, no orders/reads split
+            activityEarnedProfRvus = (activity.monthlyPerforms || 0) * workRvu;
+            if (siteType === 'Article28' && professionalRate) {
+              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * professionalRate.rate;
+            } else if (siteType === 'FPA' && globalRate) {
+              activityEarnedProfRevenue = (activity.monthlyPerforms || 0) * globalRate.rate;
             }
-            // No technical revenue for non-imaging procedures
+            // No technical or attributed for non-imaging
           }
           
-          totalProfessionalRevenue += activityProfessionalRevenue;
-          totalTechnicalRevenue += activityTechnicalRevenue;
+          earnedProfessionalRvus += activityEarnedProfRvus;
+          earnedProfessionalRevenue += activityEarnedProfRevenue;
+          earnedTechnicalRevenue += activityEarnedTechRevenue;
+          attributedProfessionalRvus += activityAttributedProfRvus;
+          attributedProfessionalRevenue += activityAttributedProfRevenue;
+          attributedTechnicalRevenue += activityAttributedTechRevenue;
           
           activityResults.push({
             cptCode: cptCode.code,
             description: cptCode.description,
             procedureType: cptCode.procedureType,
             workRvu,
-            monthlyOrders: activity.monthlyOrders,
-            monthlyReads: activity.monthlyReads,
-            monthlyPerforms: activity.monthlyPerforms,
-            rvusEarned: activityRvus,
-            professionalRevenue: activityProfessionalRevenue,
-            technicalRevenue: activityTechnicalRevenue,
+            monthlyOrders: activity.monthlyOrders || 0,
+            monthlyReads: activity.monthlyReads || 0,
+            monthlyPerforms: activity.monthlyPerforms || 0,
+            earnedProfRvus: activityEarnedProfRvus,
+            earnedProfRevenue: activityEarnedProfRevenue,
+            earnedTechRevenue: activityEarnedTechRevenue,
+            attributedProfRvus: activityAttributedProfRvus,
+            attributedProfRevenue: activityAttributedProfRevenue,
+            attributedTechRevenue: activityAttributedTechRevenue,
           });
         }
         
-        // Determine revenue attribution based on provider type
-        let professionalRevenueDestination = '';
-        let professionalRevenueRecipient = '';
-        
+        // Determine where earned revenue goes based on provider type
+        let earnedProfessionalDestination = '';
         if (provider.providerType === 'Type1') {
-          professionalRevenueDestination = 'Mount Sinai West Article 28';
-          professionalRevenueRecipient = provider.name;
+          // Type 1: Provider's own institution (same as valuation institution)
+          earnedProfessionalDestination = valuationInstitution?.name || 'Valuation Institution';
         } else if (provider.providerType === 'Type2') {
-          professionalRevenueDestination = institution?.name || 'Home Institution';
-          professionalRevenueRecipient = institution?.name || 'Home Institution';
+          // Type 2: Provider's home institution (different from valuation site)
+          earnedProfessionalDestination = institution?.name || 'Provider Home Institution';
         } else if (provider.providerType === 'Type3') {
-          professionalRevenueDestination = 'Reading Physician';
-          professionalRevenueRecipient = 'Other Providers';
-          totalRvus = 0; // Type 3 providers don't earn RVUs
+          // Type 3: Orders only, no earned revenue (goes to reading physician)
+          earnedProfessionalDestination = 'Reading Physician';
+          earnedProfessionalRvus = 0;
+          earnedProfessionalRevenue = 0;
         }
         
         return {
           valuation,
           provider,
           institution,
+          site,
+          valuationInstitution,
           activityResults,
           summary: {
-            totalRvus,
-            totalProfessionalRevenue,
-            totalTechnicalRevenue,
-            professionalRevenueDestination,
-            professionalRevenueRecipient,
-            technicalRevenueDestination: 'Mount Sinai West Article 28',
+            siteType,
+            siteName: site?.name || 'N/A',
+            // Earned (actual $ and RVUs to institutions/sites)
+            earnedProfessionalRvus,
+            earnedProfessionalRevenue,
+            earnedTechnicalRevenue,
+            earnedProfessionalDestination,
+            earnedTechnicalDestination: site?.name || 'Site',
+            // Attributed (tracking for ordering physician)
+            attributedProfessionalRvus,
+            attributedProfessionalRevenue,
+            attributedTechnicalRevenue,
+            attributedToProvider: provider.name,
           },
         };
       }),

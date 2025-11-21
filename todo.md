@@ -302,3 +302,34 @@
 - [ ] Test FPA site calculations
 - [ ] Create comprehensive vitest tests for new logic
 - [ ] Verify all revenue attribution flows correctly
+
+## Phase 4-7: Complete Revenue Attribution Model Implementation
+- [x] Update valuation_activities schema: add monthlyOrders and monthlyReads fields (keep monthlyPerforms for backward compatibility)
+- [x] Push schema changes to database
+- [x] Create Sites management page in Admin Panel
+- [x] Add site CRUD operations to backend API
+- [ ] Update Providers page to show and edit primarySiteId
+- [x] Update valuation builder: add institution selector dropdown
+- [x] Update valuation builder: add site selector dropdown (filtered by selected institution)
+- [x] Update valuation builder: split CPT activity inputs into Orders and Reads fields for imaging codes (already existed)
+- [x] Update valuation creation backend to save institutionId and siteId
+- [x] Implement earned vs attributed calculation logic in calculateValuation function
+- [x] Calculate earned professional revenue/RVUs (goes to reader's home institution)
+- [x] Calculate attributed professional revenue/RVUs (tracked for ordering MD)
+- [x] Calculate earned technical revenue (goes to site)
+- [x] Calculate attributed technical revenue (tracked for ordering MD)
+- [x] Update ValuationResults page to show earned vs attributed breakdown
+- [x] Add earned revenue section with institution/site details
+- [x] Add attributed revenue section with ordering provider tracking
+- [x] Update activity breakdown table to show Orders and Reads columns
+- [x] Test institution and site selection in valuation builder
+- [x] Verify Orders/Reads fields appear for imaging codes (93306 Echocardiography tested)
+- [x] Complete end-to-end workflow testing in browser (institution/site selection, Orders/Reads fields)
+- [x] Test FPA site creation and selection
+- [x] Test Article 28 site creation and selection
+- [x] Create vitest test suite for sites and revenue attribution (8/14 tests passing)
+- [x] Test sites CRUD operations (create, list, update FPA and Article 28 sites)
+- [x] Test valuation creation with institution and site
+- [ ] Fix remaining calculation tests (result structure validation)
+- [ ] Test Type 1, Type 2, Type 3 provider scenarios with real data
+- [x] Save checkpoint with Phase 4-7 revenue attribution system implementation
