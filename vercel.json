@@ -3,7 +3,7 @@
   "version": 2,
   "framework": null,
   "buildCommand": "npm run build:vercel",
-  "outputDirectory": "dist/public",
+  "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
     "api/**/*.ts": {
