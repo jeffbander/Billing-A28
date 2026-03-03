@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Task status and priority enums from types
 const TaskStatus = z.enum([
+  'pending_dispatch',
   'planning',
   'inbox',
   'assigned',

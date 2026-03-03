@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS workspaces (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Seed default workspace (required for foreign key constraints on tasks/agents)
+INSERT OR IGNORE INTO workspaces (id, name, slug, description, icon)
+VALUES ('default', 'ClawHealth HQ', 'default', 'Default ClawHealth workspace', '🏥');
+
 -- Agents table
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,

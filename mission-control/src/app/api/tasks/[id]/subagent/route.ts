@@ -13,10 +13,10 @@ import { broadcast } from '@/lib/events';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const taskId = params.id;
+    const { id: taskId } = await params;
     const body = await request.json();
     
     const { openclaw_session_id, agent_name } = body;
@@ -45,14 +45,15 @@ export async function POST(
         // Create temporary sub-agent record
         agentId = crypto.randomUUID();
         db.prepare(`
-          INSERT INTO agents (id, name, role, description, status)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO agents (id, name, role, description, status, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?)
         `).run(
           agentId,
           agent_name,
           'Sub-Agent',
           'Automatically created sub-agent',
-          'working'
+          'working',
+          'default'
         );
       }
     }
@@ -102,10 +103,10 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const taskId = params.id;
+    const { id: taskId } = await params;
     const db = getDb();
 
     const sessions = db.prepare(`
