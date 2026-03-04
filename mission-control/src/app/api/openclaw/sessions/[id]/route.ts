@@ -93,10 +93,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const { status, ended_at } = body;
 
-    const db = getDb();
+    const db = await getDb();
 
     // Find session by openclaw_session_id
-    const session = db.prepare('SELECT * FROM openclaw_sessions WHERE openclaw_session_id = ?').get(id) as any;
+    const sessionResult = await db.execute({ sql: 'SELECT * FROM openclaw_sessions WHERE openclaw_session_id = ?', args: [id] });
+    const session = sessionResult.rows[0] as any;
 
     if (!session) {
       return NextResponse.json(
@@ -107,7 +108,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     // Update session
     const updates: string[] = [];
-    const values: unknown[] = [];
+    const values: any[] = [];
 
     if (status !== undefined) {
       updates.push('status = ?');
@@ -127,14 +128,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     values.push(new Date().toISOString());
     values.push(session.id);
 
-    db.prepare(`UPDATE openclaw_sessions SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.execute({ sql: `UPDATE openclaw_sessions SET ${updates.join(', ')} WHERE id = ?`, args: values });
 
-    const updatedSession = db.prepare('SELECT * FROM openclaw_sessions WHERE id = ?').get(session.id);
+    const updatedResult = await db.execute({ sql: 'SELECT * FROM openclaw_sessions WHERE id = ?', args: [session.id] });
+    const updatedSession = updatedResult.rows[0];
 
     // If status changed to completed, update the agent status too
     if (status === 'completed') {
       if (session.agent_id) {
-        db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('idle', session.agent_id);
+        await db.execute({ sql: 'UPDATE agents SET status = ? WHERE id = ?', args: ['idle', session.agent_id] });
       }
       if (session.task_id) {
         broadcast({
@@ -161,13 +163,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const db = getDb();
+    const db = await getDb();
 
     // Find session by openclaw_session_id or internal id
-    let session = db.prepare('SELECT * FROM openclaw_sessions WHERE openclaw_session_id = ?').get(id) as any;
+    let sessionResult = await db.execute({ sql: 'SELECT * FROM openclaw_sessions WHERE openclaw_session_id = ?', args: [id] });
+    let session = sessionResult.rows[0] as any;
 
     if (!session) {
-      session = db.prepare('SELECT * FROM openclaw_sessions WHERE id = ?').get(id) as any;
+      sessionResult = await db.execute({ sql: 'SELECT * FROM openclaw_sessions WHERE id = ?', args: [id] });
+      session = sessionResult.rows[0] as any;
     }
 
     if (!session) {
@@ -181,16 +185,17 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const agentId = session.agent_id;
 
     // Delete the session
-    db.prepare('DELETE FROM openclaw_sessions WHERE id = ?').run(session.id);
+    await db.execute({ sql: 'DELETE FROM openclaw_sessions WHERE id = ?', args: [session.id] });
 
     // If there's an associated agent that was auto-created (role = 'Sub-Agent'), delete it too
     if (agentId) {
-      const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as any;
+      const agentResult = await db.execute({ sql: 'SELECT * FROM agents WHERE id = ?', args: [agentId] });
+      const agent = agentResult.rows[0] as any;
       if (agent && agent.role === 'Sub-Agent') {
-        db.prepare('DELETE FROM agents WHERE id = ?').run(agentId);
+        await db.execute({ sql: 'DELETE FROM agents WHERE id = ?', args: [agentId] });
       } else if (agent) {
         // Update non-subagent back to idle
-        db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('idle', agentId);
+        await db.execute({ sql: 'UPDATE agents SET status = ? WHERE id = ?', args: ['idle', agentId] });
       }
     }
 

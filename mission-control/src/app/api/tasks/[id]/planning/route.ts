@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, queryAll, queryOne, run } from '@/lib/db';
+import { queryAll, queryOne, run } from '@/lib/db';
 import { getOpenClawClient } from '@/lib/openclaw/client';
 import { broadcast } from '@/lib/events';
 import { extractJSON } from '@/lib/planning-utils';
@@ -17,7 +17,7 @@ export async function GET(
 
   try {
     // Get task
-    const task = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as {
+    const task = await queryOne<{
       id: string;
       title: string;
       description: string;
@@ -27,8 +27,8 @@ export async function GET(
       planning_complete?: number;
       planning_spec?: string;
       planning_agents?: string;
-    } | undefined;
-    
+    }>('SELECT * FROM tasks WHERE id = ?', [taskId]);
+
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -73,7 +73,7 @@ export async function POST(
 
   try {
     // Get task
-    const task = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as {
+    const task = await queryOne<{
       id: string;
       title: string;
       description: string;
@@ -81,7 +81,7 @@ export async function POST(
       workspace_id: string;
       planning_session_key?: string;
       planning_messages?: string;
-    } | undefined;
+    }>('SELECT * FROM tasks WHERE id = ?', [taskId]);
 
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
@@ -94,12 +94,12 @@ export async function POST(
 
     // Check if there are other orchestrators available before starting planning with the default master agent
     // Get the default master agent for this workspace
-    const defaultMaster = queryOne<{ id: string }>(
+    const defaultMaster = await queryOne<{ id: string }>(
       `SELECT id FROM agents WHERE is_master = 1 AND workspace_id = ? ORDER BY created_at ASC LIMIT 1`,
       [task.workspace_id]
     );
 
-    const otherOrchestrators = queryAll<{
+    const otherOrchestrators = await queryAll<{
       id: string;
       name: string;
       role: string;
@@ -164,11 +164,11 @@ Respond with ONLY valid JSON in this format:
     // Store the session key and initial message
     const messages = [{ role: 'user', content: planningPrompt, timestamp: Date.now() }];
 
-    getDb().prepare(`
+    await run(`
       UPDATE tasks
       SET planning_session_key = ?, planning_messages = ?, status = 'planning'
       WHERE id = ?
-    `).run(sessionKey, JSON.stringify(messages), taskId);
+    `, [sessionKey, JSON.stringify(messages), taskId]);
 
     // Return immediately - frontend will poll for updates
     // This eliminates the aggressive polling loop that was making 30+ OpenClaw API calls
@@ -193,7 +193,7 @@ export async function DELETE(
 
   try {
     // Get task to check session key
-    const task = queryOne<{
+    const task = await queryOne<{
       id: string;
       planning_session_key?: string;
       status: string;
@@ -207,7 +207,7 @@ export async function DELETE(
     }
 
     // Clear planning-related fields
-    run(`
+    await run(`
       UPDATE tasks
       SET planning_session_key = NULL,
           planning_messages = NULL,
@@ -220,7 +220,7 @@ export async function DELETE(
     `, [taskId]);
 
     // Broadcast task update
-    const updatedTask = queryOne('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    const updatedTask = await queryOne('SELECT * FROM tasks WHERE id = ?', [taskId]);
     if (updatedTask) {
       broadcast({
         type: 'task_updated',

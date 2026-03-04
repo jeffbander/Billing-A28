@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const task = queryOne<Task>(
+    const task = await queryOne<Task>(
       `SELECT t.*,
         aa.name as assigned_agent_name,
         aa.avatar_emoji as assigned_agent_emoji
@@ -54,7 +54,7 @@ export async function PATCH(
 
     const validatedData = validation.data;
 
-    const existing = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
+    const existing = await queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
     if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -67,7 +67,7 @@ export async function PATCH(
     // If an agent is trying to move review→done, they must be a master agent
     // User-initiated moves (no agent ID) are allowed
     if (validatedData.status === 'done' && existing.status === 'review' && validatedData.updated_by_agent_id) {
-      const updatingAgent = queryOne<Agent>(
+      const updatingAgent = await queryOne<Agent>(
         'SELECT is_master FROM agents WHERE id = ?',
         [validatedData.updated_by_agent_id]
       );
@@ -112,7 +112,7 @@ export async function PATCH(
 
       // Log status change event
       const eventType = validatedData.status === 'done' ? 'task_completed' : 'task_status_changed';
-      run(
+      await run(
         `INSERT INTO events (id, type, task_id, message, created_at)
          VALUES (?, ?, ?, ?, ?)`,
         [uuidv4(), eventType, id, `Task "${existing.title}" moved to ${validatedData.status}`, now]
@@ -125,9 +125,9 @@ export async function PATCH(
       values.push(validatedData.assigned_agent_id);
 
       if (validatedData.assigned_agent_id) {
-        const agent = queryOne<Agent>('SELECT name FROM agents WHERE id = ?', [validatedData.assigned_agent_id]);
+        const agent = await queryOne<Agent>('SELECT name FROM agents WHERE id = ?', [validatedData.assigned_agent_id]);
         if (agent) {
-          run(
+          await run(
             `INSERT INTO events (id, type, agent_id, task_id, message, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
             [uuidv4(), 'task_assigned', validatedData.assigned_agent_id, id, `"${existing.title}" assigned to ${agent.name}`, now]
@@ -149,10 +149,10 @@ export async function PATCH(
     values.push(now);
     values.push(id);
 
-    run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, values);
+    await run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, values);
 
     // Fetch updated task with all joined fields
-    const task = queryOne<Task>(
+    const task = await queryOne<Task>(
       `SELECT t.*,
         aa.name as assigned_agent_name,
         aa.avatar_emoji as assigned_agent_emoji,
@@ -199,7 +199,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const existing = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
+    const existing = await queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
 
     if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
@@ -207,13 +207,13 @@ export async function DELETE(
 
     // Delete or nullify related records first (foreign key constraints)
     // Note: task_activities and task_deliverables have ON DELETE CASCADE
-    run('DELETE FROM openclaw_sessions WHERE task_id = ?', [id]);
-    run('DELETE FROM events WHERE task_id = ?', [id]);
+    await run('DELETE FROM openclaw_sessions WHERE task_id = ?', [id]);
+    await run('DELETE FROM events WHERE task_id = ?', [id]);
     // Conversations reference tasks - nullify or delete
-    run('UPDATE conversations SET task_id = NULL WHERE task_id = ?', [id]);
+    await run('UPDATE conversations SET task_id = NULL WHERE task_id = ?', [id]);
 
     // Now delete the task (cascades to task_activities and task_deliverables)
-    run('DELETE FROM tasks WHERE id = ?', [id]);
+    await run('DELETE FROM tasks WHERE id = ?', [id]);
 
     // Broadcast deletion via SSE
     broadcast({

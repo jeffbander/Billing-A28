@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     sql += ' ORDER BY t.created_at DESC';
 
-    const tasks = queryAll<Task & { assigned_agent_name?: string; assigned_agent_emoji?: string; created_by_agent_name?: string }>(sql, params);
+    const tasks = await queryAll<Task & { assigned_agent_name?: string; assigned_agent_emoji?: string; created_by_agent_name?: string }>(sql, params);
 
     // Transform to include nested agent info
     const transformedTasks = tasks.map((task) => ({
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const workspaceId = validatedData.workspace_id || 'default';
     const status = validatedData.status || 'inbox';
     
-    run(
+    await run(
       `INSERT INTO tasks (id, title, description, status, priority, assigned_agent_id, created_by_agent_id, workspace_id, business_id, due_date, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -119,20 +119,20 @@ export async function POST(request: NextRequest) {
     // Log event
     let eventMessage = `New task: ${validatedData.title}`;
     if (validatedData.created_by_agent_id) {
-      const creator = queryOne<Agent>('SELECT name FROM agents WHERE id = ?', [validatedData.created_by_agent_id]);
+      const creator = await queryOne<Agent>('SELECT name FROM agents WHERE id = ?', [validatedData.created_by_agent_id]);
       if (creator) {
         eventMessage = `${creator.name} created task: ${validatedData.title}`;
       }
     }
 
-    run(
+    await run(
       `INSERT INTO events (id, type, agent_id, task_id, message, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [uuidv4(), 'task_created', body.created_by_agent_id || null, id, eventMessage, now]
     );
 
     // Fetch created task with all joined fields
-    const task = queryOne<Task>(
+    const task = await queryOne<Task>(
       `SELECT t.*,
         aa.name as assigned_agent_name,
         aa.avatar_emoji as assigned_agent_emoji,

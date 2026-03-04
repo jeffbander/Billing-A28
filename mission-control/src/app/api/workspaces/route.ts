@@ -15,21 +15,30 @@ export async function GET(request: NextRequest) {
   const includeStats = request.nextUrl.searchParams.get('stats') === 'true';
 
   try {
-    const db = getDb();
-    
+    const db = await getDb();
+
     if (includeStats) {
       // Get workspaces with task counts and agent counts
-      const workspaces = db.prepare('SELECT * FROM workspaces ORDER BY name').all() as Workspace[];
-      
-      const stats: WorkspaceStats[] = workspaces.map(workspace => {
+      const workspacesResult = await db.execute({
+        sql: 'SELECT * FROM workspaces ORDER BY name',
+        args: [],
+      });
+      const workspaces = workspacesResult.rows as unknown as Workspace[];
+
+      const stats: WorkspaceStats[] = [];
+      for (const workspace of workspaces) {
         // Get task counts by status
-        const taskCounts = db.prepare(`
-          SELECT status, COUNT(*) as count 
-          FROM tasks 
-          WHERE workspace_id = ? 
-          GROUP BY status
-        `).all(workspace.id) as { status: TaskStatus; count: number }[];
-        
+        const taskCountsResult = await db.execute({
+          sql: `
+            SELECT status, COUNT(*) as count
+            FROM tasks
+            WHERE workspace_id = ?
+            GROUP BY status
+          `,
+          args: [workspace.id],
+        });
+        const taskCounts = taskCountsResult.rows as unknown as { status: TaskStatus; count: number }[];
+
         const counts: WorkspaceStats['taskCounts'] = {
           pending_dispatch: 0,
           planning: 0,
@@ -41,32 +50,37 @@ export async function GET(request: NextRequest) {
           done: 0,
           total: 0
         };
-        
+
         taskCounts.forEach(tc => {
           counts[tc.status] = tc.count;
           counts.total += tc.count;
         });
-        
+
         // Get agent count
-        const agentCount = db.prepare(
-          'SELECT COUNT(*) as count FROM agents WHERE workspace_id = ?'
-        ).get(workspace.id) as { count: number };
-        
-        return {
+        const agentCountResult = await db.execute({
+          sql: 'SELECT COUNT(*) as count FROM agents WHERE workspace_id = ?',
+          args: [workspace.id],
+        });
+        const agentCount = agentCountResult.rows[0] as unknown as { count: number };
+
+        stats.push({
           id: workspace.id,
           name: workspace.name,
           slug: workspace.slug,
           icon: workspace.icon,
           taskCounts: counts,
           agentCount: agentCount.count
-        };
-      });
-      
+        });
+      }
+
       return NextResponse.json(stats);
     }
-    
-    const workspaces = db.prepare('SELECT * FROM workspaces ORDER BY name').all();
-    return NextResponse.json(workspaces);
+
+    const workspacesResult = await db.execute({
+      sql: 'SELECT * FROM workspaces ORDER BY name',
+      args: [],
+    });
+    return NextResponse.json(workspacesResult.rows);
   } catch (error) {
     console.error('Failed to fetch workspaces:', error);
     return NextResponse.json({ error: 'Failed to fetch workspaces' }, { status: 500 });
@@ -83,23 +97,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const db = getDb();
+    const db = await getDb();
     const id = crypto.randomUUID();
     const slug = generateSlug(name);
-    
+
     // Check if slug already exists
-    const existing = db.prepare('SELECT id FROM workspaces WHERE slug = ?').get(slug);
-    if (existing) {
+    const existingResult = await db.execute({
+      sql: 'SELECT id FROM workspaces WHERE slug = ?',
+      args: [slug],
+    });
+    if (existingResult.rows.length > 0) {
       return NextResponse.json({ error: 'A workspace with this name already exists' }, { status: 400 });
     }
 
-    db.prepare(`
-      INSERT INTO workspaces (id, name, slug, description, icon)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(id, name.trim(), slug, description || null, icon || '📁');
+    await db.execute({
+      sql: `
+        INSERT INTO workspaces (id, name, slug, description, icon)
+        VALUES (?, ?, ?, ?, ?)
+      `,
+      args: [id, name.trim(), slug, description || null, icon || '📁'],
+    });
 
-    const workspace = db.prepare('SELECT * FROM workspaces WHERE id = ?').get(id);
-    return NextResponse.json(workspace, { status: 201 });
+    const workspaceResult = await db.execute({
+      sql: 'SELECT * FROM workspaces WHERE id = ?',
+      args: [id],
+    });
+    return NextResponse.json(workspaceResult.rows[0], { status: 201 });
   } catch (error) {
     console.error('Failed to create workspace:', error);
     return NextResponse.json({ error: 'Failed to create workspace' }, { status: 500 });

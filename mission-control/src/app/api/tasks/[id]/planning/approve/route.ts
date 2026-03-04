@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { queryOne, queryAll, run } from '@/lib/db';
 import type { PlanningQuestion, PlanningCategory } from '@/lib/types';
 
 // Generate markdown spec from answered questions
@@ -68,24 +68,26 @@ export async function POST(
 
   try {
     // Get task
-    const task = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as { id: string; title: string; description?: string; status: string } | undefined;
+    const task = await queryOne<{ id: string; title: string; description?: string; status: string }>(
+      'SELECT * FROM tasks WHERE id = ?', [taskId]
+    );
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
     // Check if already locked
-    const existingSpec = getDb().prepare(
-      'SELECT * FROM planning_specs WHERE task_id = ?'
-    ).get(taskId);
+    const existingSpec = await queryOne(
+      'SELECT * FROM planning_specs WHERE task_id = ?', [taskId]
+    );
 
     if (existingSpec) {
       return NextResponse.json({ error: 'Spec already locked' }, { status: 400 });
     }
 
     // Get all questions
-    const questions = getDb().prepare(
-      'SELECT * FROM planning_questions WHERE task_id = ? ORDER BY sort_order'
-    ).all(taskId) as PlanningQuestion[];
+    const questions = await queryAll<PlanningQuestion>(
+      'SELECT * FROM planning_questions WHERE task_id = ? ORDER BY sort_order', [taskId]
+    );
 
     // Check if all questions are answered
     const unanswered = questions.filter(q => !q.answer);
@@ -107,29 +109,29 @@ export async function POST(
 
     // Create spec record
     const specId = crypto.randomUUID();
-    getDb().prepare(`
+    await run(`
       INSERT INTO planning_specs (id, task_id, spec_markdown, locked_at)
       VALUES (?, ?, ?, datetime('now'))
-    `).run(specId, taskId, specMarkdown);
+    `, [specId, taskId, specMarkdown]);
 
     // Update task description with spec and move to inbox
-    getDb().prepare(`
-      UPDATE tasks 
+    await run(`
+      UPDATE tasks
       SET description = ?, status = 'inbox', updated_at = datetime('now')
       WHERE id = ?
-    `).run(specMarkdown, taskId);
+    `, [specMarkdown, taskId]);
 
     // Log activity
     const activityId = crypto.randomUUID();
-    getDb().prepare(`
+    await run(`
       INSERT INTO task_activities (id, task_id, activity_type, message)
       VALUES (?, ?, 'status_changed', 'Planning complete - spec locked and moved to inbox')
-    `).run(activityId, taskId);
+    `, [activityId, taskId]);
 
     // Get the created spec
-    const spec = getDb().prepare(
-      'SELECT * FROM planning_specs WHERE id = ?'
-    ).get(specId);
+    const spec = await queryOne(
+      'SELECT * FROM planning_specs WHERE id = ?', [specId]
+    );
 
     return NextResponse.json({
       success: true,

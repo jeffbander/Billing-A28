@@ -21,14 +21,18 @@ export async function GET(
 ) {
   try {
     const { id: taskId } = await params;
-    const db = getDb();
+    const db = await getDb();
 
-    const deliverables = db.prepare(`
-      SELECT *
-      FROM task_deliverables
-      WHERE task_id = ?
-      ORDER BY created_at DESC
-    `).all(taskId) as TaskDeliverable[];
+    const result = await db.execute({
+      sql: `
+        SELECT *
+        FROM task_deliverables
+        WHERE task_id = ?
+        ORDER BY created_at DESC
+      `,
+      args: [taskId],
+    });
+    const deliverables = result.rows as unknown as TaskDeliverable[];
 
     return NextResponse.json(deliverables);
   } catch (error) {
@@ -51,7 +55,7 @@ export async function POST(
   try {
     const { id: taskId } = await params;
     const body = await request.json();
-    
+
     // Validate input with Zod
     const validation = CreateDeliverableSchema.safeParse(body);
     if (!validation.success) {
@@ -75,28 +79,35 @@ export async function POST(
       }
     }
 
-    const db = getDb();
+    const db = await getDb();
     const id = crypto.randomUUID();
 
     // Insert deliverable
-    db.prepare(`
-      INSERT INTO task_deliverables (id, task_id, deliverable_type, title, path, description)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      taskId,
-      deliverable_type,
-      title,
-      path || null,
-      description || null
-    );
+    await db.execute({
+      sql: `
+        INSERT INTO task_deliverables (id, task_id, deliverable_type, title, path, description)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        id,
+        taskId,
+        deliverable_type,
+        title,
+        path || null,
+        description || null,
+      ],
+    });
 
     // Get the created deliverable
-    const deliverable = db.prepare(`
-      SELECT *
-      FROM task_deliverables
-      WHERE id = ?
-    `).get(id) as TaskDeliverable;
+    const deliverableResult = await db.execute({
+      sql: `
+        SELECT *
+        FROM task_deliverables
+        WHERE id = ?
+      `,
+      args: [id],
+    });
+    const deliverable = deliverableResult.rows[0] as unknown as TaskDeliverable;
 
     // Broadcast to SSE clients
     broadcast({

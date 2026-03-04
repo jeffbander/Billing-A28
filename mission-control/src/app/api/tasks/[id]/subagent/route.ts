@@ -18,7 +18,7 @@ export async function POST(
   try {
     const { id: taskId } = await params;
     const body = await request.json();
-    
+
     const { openclaw_session_id, agent_name } = body;
 
     if (!openclaw_session_id) {
@@ -28,54 +28,66 @@ export async function POST(
       );
     }
 
-    const db = getDb();
+    const db = await getDb();
     const sessionId = crypto.randomUUID();
 
     // Create a placeholder agent if agent_name is provided
     // Otherwise, we'll need to link to an existing agent
     let agentId = null;
-    
+
     if (agent_name) {
       // Check if agent already exists
-      const existingAgent = db.prepare('SELECT id FROM agents WHERE name = ?').get(agent_name) as any;
-      
+      const existingResult = await db.execute({
+        sql: 'SELECT id FROM agents WHERE name = ?',
+        args: [agent_name],
+      });
+      const existingAgent = existingResult.rows[0] as any;
+
       if (existingAgent) {
         agentId = existingAgent.id;
       } else {
         // Create temporary sub-agent record
         agentId = crypto.randomUUID();
-        db.prepare(`
-          INSERT INTO agents (id, name, role, description, status, workspace_id)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(
-          agentId,
-          agent_name,
-          'Sub-Agent',
-          'Automatically created sub-agent',
-          'working',
-          'default'
-        );
+        await db.execute({
+          sql: `
+            INSERT INTO agents (id, name, role, description, status, workspace_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `,
+          args: [
+            agentId,
+            agent_name,
+            'Sub-Agent',
+            'Automatically created sub-agent',
+            'working',
+            'default',
+          ],
+        });
       }
     }
 
     // Insert OpenClaw session record
-    db.prepare(`
-      INSERT INTO openclaw_sessions 
-        (id, agent_id, openclaw_session_id, session_type, task_id, status)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      sessionId,
-      agentId,
-      openclaw_session_id,
-      'subagent',
-      taskId,
-      'active'
-    );
+    await db.execute({
+      sql: `
+        INSERT INTO openclaw_sessions
+          (id, agent_id, openclaw_session_id, session_type, task_id, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        sessionId,
+        agentId,
+        openclaw_session_id,
+        'subagent',
+        taskId,
+        'active',
+      ],
+    });
 
     // Get the created session
-    const session = db.prepare(`
-      SELECT * FROM openclaw_sessions WHERE id = ?
-    `).get(sessionId);
+    const sessionResult = await db.execute({
+      sql: 'SELECT * FROM openclaw_sessions WHERE id = ?',
+      args: [sessionId],
+    });
+    const session = sessionResult.rows[0];
 
     // Broadcast agent spawned event
     broadcast({
@@ -107,18 +119,22 @@ export async function GET(
 ) {
   try {
     const { id: taskId } = await params;
-    const db = getDb();
+    const db = await getDb();
 
-    const sessions = db.prepare(`
-      SELECT 
-        s.*,
-        a.name as agent_name,
-        a.avatar_emoji as agent_avatar_emoji
-      FROM openclaw_sessions s
-      LEFT JOIN agents a ON s.agent_id = a.id
-      WHERE s.task_id = ? AND s.session_type = 'subagent'
-      ORDER BY s.created_at DESC
-    `).all(taskId);
+    const result = await db.execute({
+      sql: `
+        SELECT
+          s.*,
+          a.name as agent_name,
+          a.avatar_emoji as agent_avatar_emoji
+        FROM openclaw_sessions s
+        LEFT JOIN agents a ON s.agent_id = a.id
+        WHERE s.task_id = ? AND s.session_type = 'subagent'
+        ORDER BY s.created_at DESC
+      `,
+      args: [taskId],
+    });
+    const sessions = result.rows;
 
     return NextResponse.json(sessions);
   } catch (error) {

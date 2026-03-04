@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { queryOne, queryAll, run, transaction } from '@/lib/db';
+import { queryOne, queryAll, run } from '@/lib/db';
 import type { Agent } from '@/lib/types';
 
 interface ImportAgentRequest {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for conflicts (already imported)
-    const existingImports = queryAll<Agent>(
+    const existingImports = await queryAll<Agent>(
       `SELECT * FROM agents WHERE gateway_agent_id IS NOT NULL`
     );
     const importedGatewayIds = new Set(existingImports.map((a) => a.gateway_agent_id));
@@ -47,54 +47,52 @@ export async function POST(request: NextRequest) {
       skipped: [],
     };
 
-    transaction(() => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      for (const agentReq of body.agents) {
-        // Skip if already imported
-        if (importedGatewayIds.has(agentReq.gateway_agent_id)) {
-          results.skipped.push({
-            gateway_agent_id: agentReq.gateway_agent_id,
-            reason: 'Already imported',
-          });
-          continue;
-        }
-
-        const id = uuidv4();
-        const workspaceId = agentReq.workspace_id || 'default';
-
-        run(
-          `INSERT INTO agents (id, name, role, description, avatar_emoji, is_master, workspace_id, model, source, gateway_agent_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            id,
-            agentReq.name,
-            'Imported Agent',
-            `Imported from OpenClaw Gateway (${agentReq.gateway_agent_id})`,
-            '🔗',
-            0,
-            workspaceId,
-            agentReq.model || null,
-            'gateway',
-            agentReq.gateway_agent_id,
-            now,
-            now,
-          ]
-        );
-
-        // Log event
-        run(
-          `INSERT INTO events (id, type, agent_id, message, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
-          [uuidv4(), 'agent_joined', id, `${agentReq.name} imported from OpenClaw Gateway`, now]
-        );
-
-        const agent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
-        if (agent) {
-          results.imported.push(agent);
-        }
+    for (const agentReq of body.agents) {
+      // Skip if already imported
+      if (importedGatewayIds.has(agentReq.gateway_agent_id)) {
+        results.skipped.push({
+          gateway_agent_id: agentReq.gateway_agent_id,
+          reason: 'Already imported',
+        });
+        continue;
       }
-    });
+
+      const id = uuidv4();
+      const workspaceId = agentReq.workspace_id || 'default';
+
+      await run(
+        `INSERT INTO agents (id, name, role, description, avatar_emoji, is_master, workspace_id, model, source, gateway_agent_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          agentReq.name,
+          'Imported Agent',
+          `Imported from OpenClaw Gateway (${agentReq.gateway_agent_id})`,
+          '🔗',
+          0,
+          workspaceId,
+          agentReq.model || null,
+          'gateway',
+          agentReq.gateway_agent_id,
+          now,
+          now,
+        ]
+      );
+
+      // Log event
+      await run(
+        `INSERT INTO events (id, type, agent_id, message, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [uuidv4(), 'agent_joined', id, `${agentReq.name} imported from OpenClaw Gateway`, now]
+      );
+
+      const agent = await queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
+      if (agent) {
+        results.imported.push(agent);
+      }
+    }
 
     return NextResponse.json(results, { status: 201 });
   } catch (error) {

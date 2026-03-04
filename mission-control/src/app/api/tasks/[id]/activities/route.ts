@@ -19,20 +19,24 @@ export async function GET(
 ) {
   try {
     const { id: taskId } = await params;
-    const db = getDb();
+    const db = await getDb();
 
     // Get activities with agent info
-    const activities = db.prepare(`
-      SELECT 
-        a.*,
-        ag.id as agent_id,
-        ag.name as agent_name,
-        ag.avatar_emoji as agent_avatar_emoji
-      FROM task_activities a
-      LEFT JOIN agents ag ON a.agent_id = ag.id
-      WHERE a.task_id = ?
-      ORDER BY a.created_at DESC
-    `).all(taskId) as any[];
+    const activitiesResult = await db.execute({
+      sql: `
+        SELECT
+          a.*,
+          ag.id as agent_id,
+          ag.name as agent_name,
+          ag.avatar_emoji as agent_avatar_emoji
+        FROM task_activities a
+        LEFT JOIN agents ag ON a.agent_id = ag.id
+        WHERE a.task_id = ?
+        ORDER BY a.created_at DESC
+      `,
+      args: [taskId],
+    });
+    const activities = activitiesResult.rows as any[];
 
     // Transform to include agent object
     const result: TaskActivity[] = activities.map(row => ({
@@ -79,7 +83,7 @@ export async function POST(
   try {
     const { id: taskId } = await params;
     const body = await request.json();
-    
+
     // Validate input with Zod
     const validation = CreateActivitySchema.safeParse(body);
     if (!validation.success) {
@@ -91,33 +95,40 @@ export async function POST(
 
     const { activity_type, message, agent_id, metadata } = validation.data;
 
-    const db = getDb();
+    const db = await getDb();
     const id = crypto.randomUUID();
 
     // Insert activity
-    db.prepare(`
-      INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, metadata)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      taskId,
-      agent_id || null,
-      activity_type,
-      message,
-      metadata ? JSON.stringify(metadata) : null
-    );
+    await db.execute({
+      sql: `
+        INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, metadata)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        id,
+        taskId,
+        agent_id || null,
+        activity_type,
+        message,
+        metadata ? JSON.stringify(metadata) : null,
+      ],
+    });
 
     // Get the created activity with agent info
-    const activity = db.prepare(`
-      SELECT 
-        a.*,
-        ag.id as agent_id,
-        ag.name as agent_name,
-        ag.avatar_emoji as agent_avatar_emoji
-      FROM task_activities a
-      LEFT JOIN agents ag ON a.agent_id = ag.id
-      WHERE a.id = ?
-    `).get(id) as any;
+    const activityResult = await db.execute({
+      sql: `
+        SELECT
+          a.*,
+          ag.id as agent_id,
+          ag.name as agent_name,
+          ag.avatar_emoji as agent_avatar_emoji
+        FROM task_activities a
+        LEFT JOIN agents ag ON a.agent_id = ag.id
+        WHERE a.id = ?
+      `,
+      args: [id],
+    });
+    const activity = activityResult.rows[0] as any;
 
     const result: TaskActivity = {
       id: activity.id,

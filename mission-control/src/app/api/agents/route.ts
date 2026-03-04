@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
     
     let agents: Agent[];
     if (workspaceId) {
-      agents = queryAll<Agent>(`
+      agents = await queryAll<Agent>(`
         SELECT * FROM agents WHERE workspace_id = ? ORDER BY is_master DESC, name ASC
       `, [workspaceId]);
     } else {
-      agents = queryAll<Agent>(`
+      agents = await queryAll<Agent>(`
         SELECT * FROM agents ORDER BY is_master DESC, name ASC
       `);
     }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    run(
+    await run(
       `INSERT INTO agents (id, name, role, description, avatar_emoji, is_master, workspace_id, soul_md, user_md, agents_md, model, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -58,13 +58,13 @@ export async function POST(request: NextRequest) {
     );
 
     // Log event
-    run(
+    await run(
       `INSERT INTO events (id, type, agent_id, message, created_at)
        VALUES (?, ?, ?, ?, ?)`,
       [uuidv4(), 'agent_joined', id, `${body.name} joined the team`, now]
     );
 
-    const agent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
+    const agent = await queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
     return NextResponse.json(agent, { status: 201 });
   } catch (error) {
     console.error('Failed to create agent:', error);

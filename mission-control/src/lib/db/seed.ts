@@ -1,7 +1,7 @@
 // Database seed script - creates initial data including the master orchestrator agent
 
 import { v4 as uuidv4 } from 'uuid';
-import { getDb, closeDb } from './index';
+import { queryOne, run, closeDb } from './index';
 
 const ORCHESTRATOR_SOUL_MD = `# Albert — ClawHealth Orchestrator
 
@@ -97,33 +97,34 @@ If agents disagree:
 async function seed() {
   console.log('🌱 Seeding database...');
 
-  const db = getDb();
   const now = new Date().toISOString();
 
   // Create default business
   const businessId = 'default';
-  db.prepare(
-    `INSERT OR IGNORE INTO businesses (id, name, description, created_at) VALUES (?, ?, ?, ?)`
-  ).run(businessId, 'ClawHealth HQ', 'Jeff Bander\'s AI Command Center for ClawHealth operations', now);
+  await run(
+    `INSERT OR IGNORE INTO businesses (id, name, description, created_at) VALUES (?, ?, ?, ?)`,
+    [businessId, 'ClawHealth HQ', 'Jeff Bander\'s AI Command Center for ClawHealth operations', now]
+  );
 
   // Create master orchestrator agent
   const orchestratorId = uuidv4();
-  db.prepare(
+  await run(
     `INSERT INTO agents (id, name, role, description, avatar_emoji, status, is_master, soul_md, user_md, agents_md, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    orchestratorId,
-    'Albert',
-    'Chief AI Orchestrator',
-    'Albert — the master orchestrator running on Jeff Bander\'s Mac Mini, coordinating all ClawHealth agents',
-    '🤖',
-    'standby',
-    1,
-    ORCHESTRATOR_SOUL_MD,
-    ORCHESTRATOR_USER_MD,
-    ORCHESTRATOR_AGENTS_MD,
-    now,
-    now
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      orchestratorId,
+      'Albert',
+      'Chief AI Orchestrator',
+      'Albert — the master orchestrator running on Jeff Bander\'s Mac Mini, coordinating all ClawHealth agents',
+      '🤖',
+      'standby',
+      1,
+      ORCHESTRATOR_SOUL_MD,
+      ORCHESTRATOR_USER_MD,
+      ORCHESTRATOR_AGENTS_MD,
+      now,
+      now
+    ]
   );
 
   // Create ClawHealth-specific agents
@@ -139,25 +140,28 @@ async function seed() {
   for (const agent of agents) {
     const agentId = uuidv4();
     agentIds.push(agentId);
-    db.prepare(
+    await run(
       `INSERT INTO agents (id, name, role, description, avatar_emoji, status, is_master, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(agentId, agent.name, agent.role, agent.desc, agent.emoji, 'standby', 0, now, now);
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [agentId, agent.name, agent.role, agent.desc, agent.emoji, 'standby', 0, now, now]
+    );
   }
 
   // Create a team conversation
   const teamConvoId = uuidv4();
-  db.prepare(
+  await run(
     `INSERT INTO conversations (id, title, type, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(teamConvoId, 'Team Chat', 'group', now, now);
+     VALUES (?, ?, ?, ?, ?)`,
+    [teamConvoId, 'Team Chat', 'group', now, now]
+  );
 
   // Add all agents to the team conversation
   for (const agentId of agentIds) {
-    db.prepare(
+    await run(
       `INSERT INTO conversation_participants (conversation_id, agent_id, joined_at)
-       VALUES (?, ?, ?)`
-    ).run(teamConvoId, agentId, now);
+       VALUES (?, ?, ?)`,
+      [teamConvoId, agentId, now]
+    );
   }
 
   // Create ClawHealth example tasks
@@ -173,10 +177,11 @@ async function seed() {
     const task = tasks[i];
     const assignedTo = task.status !== 'inbox' ? agentIds[i % agentIds.length] : null;
 
-    db.prepare(
+    await run(
       `INSERT INTO tasks (id, title, status, priority, assigned_agent_id, created_by_agent_id, business_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(taskId, task.title, task.status, task.priority, assignedTo, orchestratorId, businessId, now, now);
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [taskId, task.title, task.status, task.priority, assignedTo, orchestratorId, businessId, now, now]
+    );
   }
 
   // Create initial events
@@ -187,23 +192,25 @@ async function seed() {
   ];
 
   for (const event of events) {
-    db.prepare(
+    await run(
       `INSERT INTO events (id, type, agent_id, message, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).run(uuidv4(), event.type, event.agentId || null, event.message, now);
+       VALUES (?, ?, ?, ?, ?)`,
+      [uuidv4(), event.type, event.agentId || null, event.message, now]
+    );
   }
 
   // Add a welcome message from the orchestrator
-  db.prepare(
+  await run(
     `INSERT INTO messages (id, conversation_id, sender_agent_id, content, message_type, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
-    uuidv4(),
-    teamConvoId,
-    orchestratorId,
-    "Welcome to ClawHealth Mission Control! 🤖 I'm Albert, your orchestrator running on Jeff's Mac Mini. Let's build something great for healthcare.",
-    'text',
-    now
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      uuidv4(),
+      teamConvoId,
+      orchestratorId,
+      "Welcome to ClawHealth Mission Control! 🤖 I'm Albert, your orchestrator running on Jeff's Mac Mini. Let's build something great for healthcare.",
+      'text',
+      now
+    ]
   );
 
   console.log('✅ Database seeded successfully!');
@@ -212,7 +219,7 @@ async function seed() {
   console.log(`   - Created ${tasks.length} sample tasks`);
   console.log(`   - Created team conversation`);
 
-  closeDb();
+  await closeDb();
 }
 
 seed().catch(console.error);
